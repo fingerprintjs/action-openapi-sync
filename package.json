@@ -7,6 +7,9 @@
   "scripts": {
     "prepare": "husky",
     "build": "node esbuild.config.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit"
@@ -19,9 +22,12 @@
     "@fingerprintjs/prettier-config-dx-team": "^0.3.0",
     "@fingerprintjs/tsconfig-dx-team": "^0.0.2",
     "@types/node": "^25.3.5",
+    "@vitest/coverage-v8": "^4.0.18",
     "esbuild": "^0.27.3",
     "eslint": "^8.56.0",
     "husky": "^9.1.7",
-    "typescript": "^5.9.3"
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
