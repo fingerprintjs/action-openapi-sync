@@ -12,18 +12,13 @@ interface CliResult {
 
 function runCli(args: string[], cwd: string, env?: Record<string, string>): Promise<CliResult> {
   return new Promise((resolve) => {
-    execFile(
-      tsxBin,
-      [cliPath, ...args],
-      { cwd, env: { ...process.env, ...env } },
-      (error, stdout, stderr) => {
-        resolve({
-          stdout: stdout.toString(),
-          stderr: stderr.toString(),
-          exitCode: error?.code ?? 0,
-        })
-      }
-    )
+    execFile(tsxBin, [cliPath, ...args], { cwd, env: { ...process.env, ...env } }, (error, stdout, stderr) => {
+      resolve({
+        stdout: stdout.toString(),
+        stderr: stderr.toString(),
+        exitCode: error?.code ?? 0,
+      })
+    })
   })
 }
 
