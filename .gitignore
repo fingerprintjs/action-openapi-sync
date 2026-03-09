@@ -1,0 +1,11 @@
+### Project
+/dist
+
+### Node
+/node_modules
+
+### Intellij
+/.idea
+
+### VSCode
+/.vscode
