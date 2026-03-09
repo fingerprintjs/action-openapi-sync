@@ -5,6 +5,7 @@
   "author": "FingerprintJS, Inc (https://fingerprint.com)",
   "license": "MIT",
   "scripts": {
+    "prepare": "husky",
     "build": "node esbuild.config.mjs",
     "typecheck": "tsc --noEmit"
   },
@@ -15,6 +16,7 @@
     "@fingerprintjs/tsconfig-dx-team": "^0.0.2",
     "@types/node": "^25.3.5",
     "esbuild": "^0.27.3",
+    "husky": "^9.1.7",
     "typescript": "^5.9.3"
   }
 }
