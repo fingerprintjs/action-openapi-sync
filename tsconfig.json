@@ -10,7 +10,7 @@
     "declaration": false,
     "exactOptionalPropertyTypes": false,
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", ".eslintrc.cjs"],
   "exclude": ["node_modules"],
 }
 

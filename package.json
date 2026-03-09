@@ -7,15 +7,20 @@
   "scripts": {
     "prepare": "husky",
     "build": "node esbuild.config.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit"
   },
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.30.1",
   "devDependencies": {
+    "@fingerprintjs/eslint-config-dx-team": "^0.2.0",
+    "@fingerprintjs/prettier-config-dx-team": "^0.3.0",
     "@fingerprintjs/tsconfig-dx-team": "^0.0.2",
     "@types/node": "^25.3.5",
     "esbuild": "^0.27.3",
+    "eslint": "^8.56.0",
     "husky": "^9.1.7",
     "typescript": "^5.9.3"
   }
