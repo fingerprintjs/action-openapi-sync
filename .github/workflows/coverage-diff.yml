@@ -1,0 +1,49 @@
+name: 'Check coverage for PR'
+
+on:
+  pull_request:
+
+jobs:
+  run-tests-check-coverage:
+    name: Run tests & check coverage
+    runs-on: ubuntu-22.04
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read # for private repos
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: 'Install pnpm'
+        uses: pnpm/action-setup@129abb77bf5884e578fcaf1f37628e41622cc371
+
+      - name: 'Install latest node version'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Node packages
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run tests and prepare coverage report
+        run: pnpm test:coverage
+
+      - name: Read coverage text report
+        uses: fingerprintjs/action-coverage-report-md@v2
+        id: coverage-md
+
+      - name: Vitest coverage report
+        uses: davelosert/vitest-coverage-report-action@v2
+
+      - name: Add coverage report to the job summary
+        run: |
+          {
+            echo "## Code Coverage"
+            echo ""
+            echo "${{ steps.coverage-md.outputs.markdownReport }}"
+          } >> $GITHUB_STEP_SUMMARY

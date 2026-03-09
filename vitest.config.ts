@@ -7,6 +7,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
+      reporter: ['text', 'json', 'json-summary', 'lcov', 'html', 'clover'],
     },
   },
 })
