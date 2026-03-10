@@ -96,6 +96,12 @@ export function filterFiles(
 
   // Clean dangling $refs
   for (const [filePath, content] of filtered) {
+    // Prevent example files from being transformed into YAML
+    const ext = path.extname(filePath).toLowerCase()
+    if (ext !== '.yaml' && ext !== '.yml') {
+      continue
+    }
+
     const doc = yaml.load(content)
     if (!isRecord(doc)) {
       continue

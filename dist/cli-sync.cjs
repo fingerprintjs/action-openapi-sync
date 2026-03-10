@@ -4813,6 +4813,10 @@ function filterFiles(files, reachableFiles, config) {
     }
   }
   for (const [filePath, content] of filtered) {
+    const ext2 = path5.extname(filePath).toLowerCase();
+    if (ext2 !== ".yaml" && ext2 !== ".yml") {
+      continue;
+    }
     const doc = load(content);
     if (!isRecord(doc)) {
       continue;
