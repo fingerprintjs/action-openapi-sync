@@ -93,6 +93,8 @@ file_mappings:
 
   - source_dir: api/paths
     target_dir: schemas/paths
+    exclude_from_deletion:
+      - "examples/**"
 
 internal:
   internal_marker: x-internal
@@ -128,7 +130,7 @@ In bundled mode the action only reads the pre-built `entrypoint` file, strips in
 
 The action filters internal content at multiple levels:
 
-**File-level** - Skip entire file if top-level `x-internal: true` is present, or if the file path matches to `exclude_patterns` glob.
+**File-level** - Skip entire file if top-level `x-internal: true` is present, or if the file path matches an `exclude_patterns` glob.
 
 **Path operations** - Remove operations (GET, POST, etc.) marked `x-internal: true`. If all operations on a path are internal, the entire path is removed.
 
@@ -138,7 +140,11 @@ The action filters internal content at multiple levels:
 
 **Dangling `$ref` cleanup** - After filtering, any `$ref` pointing to an excluded file is removed.
 
-**Field stripping** — All keys listed in `strip_fields` are removed from the output.
+**Orphaned file removal** - After filtering and dangling ref cleanup, files no longer reachable from the entrypoint are excluded.
+
+**Field stripping** - All keys listed in `strip_fields` are removed from the output.
+
+**`externalValue` support** - Files referenced via OpenAPI `externalValue` are included in ref resolution.
 
 ## Full Workflow Example
 
@@ -147,7 +153,7 @@ name: Sync OpenAPI Schema
 
 on:
   pull_request:
-    types: [closed, labeled]
+    types: [opened, synchronize, reopened, closed, labeled]
     branches: [main]
     paths:
       - 'api/**'
@@ -200,7 +206,7 @@ Install dependencies
 pnpm install
 ```
 
-Run `prepare` for install git hooks
+Run `prepare` to install git hooks
 
 ```bash
 pnpm prepare
