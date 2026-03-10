@@ -120,6 +120,60 @@ export function filterFiles(
   return { filtered, excludedFiles }
 }
 
+/** Collect file paths referenced with $ref in a node. */
+function collectFileRefs(node: unknown, currentDir: string, seen: Set<string>, queue: string[]): void {
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      collectFileRefs(item, currentDir, seen, queue)
+    }
+    return
+  }
+
+  if (!isRecord(node)) {
+    return
+  }
+
+  if (typeof node['$ref'] === 'string' && !node['$ref'].startsWith('#')) {
+    const filePart = node['$ref'].split('#')[0]
+    const resolved = path.normalize(path.join(currentDir, filePart)).split(path.sep).join('/')
+    if (!seen.has(resolved)) {
+      queue.push(resolved)
+    }
+  }
+
+  for (const value of Object.values(node)) {
+    collectFileRefs(value, currentDir, seen, queue)
+  }
+}
+
+/** Remove files that are no longer reachable from the entrypoint. */
+export function removeOrphanedFiles(filtered: Map<string, string>, entrypoint: string): string[] {
+  const reachable = new Set<string>()
+  const queue = [entrypoint]
+
+  while (queue.length > 0) {
+    const current = queue.pop()!
+    if (reachable.has(current) || !filtered.has(current)) {
+      continue
+    }
+    reachable.add(current)
+
+    const doc = yaml.load(filtered.get(current)!)
+    const currentDir = path.dirname(current)
+    collectFileRefs(doc, currentDir, reachable, queue)
+  }
+
+  const orphaned: string[] = []
+  for (const filePath of filtered.keys()) {
+    if (!reachable.has(filePath)) {
+      orphaned.push(filePath)
+      filtered.delete(filePath)
+    }
+  }
+
+  return orphaned
+}
+
 /** Check if a file path matches with exclude glob patterns. */
 export function isFileExcluded(filePath: string, config: InternalConfig): boolean {
   return config.exclude_patterns.some((pattern) => minimatch(filePath, pattern))

@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as yaml from 'js-yaml'
 import { describe, expect, it, vi } from 'vitest'
-import { filterFile, filterFiles, isFileExcluded } from '../src/filter'
+import { filterFile, filterFiles, isFileExcluded, removeOrphanedFiles } from '../src/filter'
 import type { InternalConfig } from '../src/types'
 
 const fixturesDir = path.resolve(__dirname, 'fixtures/filter')
@@ -789,5 +789,94 @@ describe('filterFiles', () => {
 
     expect(result.filtered.size).toBe(1)
     expect(result.filtered.has('a.yml')).toBe(true)
+  })
+})
+
+describe('removeOrphanedFiles', () => {
+  it('removes files not reachable from the entrypoint', () => {
+    const filtered = new Map([
+      ['entry.yml', yaml.dump({ type: 'object', schema: { $ref: './kept.yml' } })],
+      ['kept.yml', yaml.dump({ type: 'string' })],
+      ['orphan.yml', yaml.dump({ type: 'number' })],
+    ])
+
+    const orphaned = removeOrphanedFiles(filtered, 'entry.yml')
+
+    expect(filtered.has('entry.yml')).toBe(true)
+    expect(filtered.has('kept.yml')).toBe(true)
+    expect(filtered.has('orphan.yml')).toBe(false)
+    expect(orphaned).toEqual(['orphan.yml'])
+  })
+
+  it('follows transitive refs', () => {
+    const filtered = new Map([
+      ['entry.yml', yaml.dump({ $ref: './a.yml' })],
+      ['a.yml', yaml.dump({ $ref: './b.yml' })],
+      ['b.yml', yaml.dump({ type: 'string' })],
+      ['orphan.yml', yaml.dump({ type: 'number' })],
+    ])
+
+    removeOrphanedFiles(filtered, 'entry.yml')
+
+    expect(filtered.size).toBe(3)
+    expect(filtered.has('orphan.yml')).toBe(false)
+  })
+
+  it('returns empty array when all files are reachable', () => {
+    const filtered = new Map([
+      ['entry.yml', yaml.dump({ $ref: './other.yml' })],
+      ['other.yml', yaml.dump({ type: 'string' })],
+    ])
+
+    const orphaned = removeOrphanedFiles(filtered, 'entry.yml')
+
+    expect(orphaned).toEqual([])
+    expect(filtered.size).toBe(2)
+  })
+
+  it('skips refs pointing to files not in the map', () => {
+    const filtered = new Map([['entry.yml', yaml.dump({ $ref: './missing.yml' })]])
+
+    const orphaned = removeOrphanedFiles(filtered, 'entry.yml')
+
+    expect(orphaned).toEqual([])
+    expect(filtered.size).toBe(1)
+  })
+
+  it('handles circular refs without infinite loop', () => {
+    const filtered = new Map([
+      ['entry.yml', yaml.dump({ $ref: './a.yml' })],
+      ['a.yml', yaml.dump({ $ref: './entry.yml' })],
+    ])
+
+    const orphaned = removeOrphanedFiles(filtered, 'entry.yml')
+
+    expect(orphaned).toEqual([])
+    expect(filtered.size).toBe(2)
+  })
+
+  it('ignores internal refs', () => {
+    const filtered = new Map([
+      ['entry.yml', yaml.dump({ $ref: '#/definitions/Foo' })],
+      ['unlinked.yml', yaml.dump({ type: 'string' })],
+    ])
+
+    removeOrphanedFiles(filtered, 'entry.yml')
+
+    expect(filtered.has('entry.yml')).toBe(true)
+    expect(filtered.has('unlinked.yml')).toBe(false)
+  })
+
+  it('handles refs in nested directories', () => {
+    const filtered = new Map([
+      ['api/entry.yml', yaml.dump({ $ref: '../components/schema.yml' })],
+      ['components/schema.yml', yaml.dump({ type: 'object' })],
+      ['components/orphan.yml', yaml.dump({ type: 'string' })],
+    ])
+
+    removeOrphanedFiles(filtered, 'api/entry.yml')
+
+    expect(filtered.has('components/schema.yml')).toBe(true)
+    expect(filtered.has('components/orphan.yml')).toBe(false)
   })
 })

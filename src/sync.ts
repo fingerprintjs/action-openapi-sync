@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { mapSourceToTarget } from './config'
 import { resolveRefs } from './resolve'
-import { filterFile, filterFiles } from './filter'
+import { filterFile, filterFiles, removeOrphanedFiles } from './filter'
 import type { SyncConfig } from './types'
 
 /** Resolve refs, filter internal content, and map source paths to target paths. */
@@ -19,6 +19,7 @@ export async function syncMultiFile(config: SyncConfig, sourceRoot: string): Pro
 
   console.log('Filtering internal content...')
   const filterResult = filterFiles(sourceFiles, reachableFiles, config.internal)
+  removeOrphanedFiles(filterResult.filtered, config.entrypoint)
   console.log(`Filtered: ${filterResult.filtered.size} files kept, ${filterResult.excludedFiles.size} files excluded`)
 
   const targetFiles = new Map<string, string>()

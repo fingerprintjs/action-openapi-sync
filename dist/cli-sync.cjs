@@ -4829,6 +4829,49 @@ function filterFiles(files, reachableFiles, config) {
   }
   return { filtered, excludedFiles };
 }
+function collectFileRefs(node, currentDir, seen, queue) {
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      collectFileRefs(item, currentDir, seen, queue);
+    }
+    return;
+  }
+  if (!isRecord(node)) {
+    return;
+  }
+  if (typeof node["$ref"] === "string" && !node["$ref"].startsWith("#")) {
+    const filePart = node["$ref"].split("#")[0];
+    const resolved = path5.normalize(path5.join(currentDir, filePart)).split(path5.sep).join("/");
+    if (!seen.has(resolved)) {
+      queue.push(resolved);
+    }
+  }
+  for (const value of Object.values(node)) {
+    collectFileRefs(value, currentDir, seen, queue);
+  }
+}
+function removeOrphanedFiles(filtered, entrypoint) {
+  const reachable = /* @__PURE__ */ new Set();
+  const queue = [entrypoint];
+  while (queue.length > 0) {
+    const current = queue.pop();
+    if (reachable.has(current) || !filtered.has(current)) {
+      continue;
+    }
+    reachable.add(current);
+    const doc = load(filtered.get(current));
+    const currentDir = path5.dirname(current);
+    collectFileRefs(doc, currentDir, reachable, queue);
+  }
+  const orphaned = [];
+  for (const filePath of filtered.keys()) {
+    if (!reachable.has(filePath)) {
+      orphaned.push(filePath);
+      filtered.delete(filePath);
+    }
+  }
+  return orphaned;
+}
 function isFileExcluded(filePath, config) {
   return config.exclude_patterns.some((pattern) => minimatch(filePath, pattern));
 }
@@ -5023,6 +5066,7 @@ async function syncMultiFile(config, sourceRoot) {
   }
   console.log("Filtering internal content...");
   const filterResult = filterFiles(sourceFiles, reachableFiles, config.internal);
+  removeOrphanedFiles(filterResult.filtered, config.entrypoint);
   console.log(`Filtered: ${filterResult.filtered.size} files kept, ${filterResult.excludedFiles.size} files excluded`);
   const targetFiles = /* @__PURE__ */ new Map();
   for (const [sourcePath, content] of filterResult.filtered) {
