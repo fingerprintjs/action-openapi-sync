@@ -36,6 +36,13 @@ inputs:
     description: 'Only report diff'
     required: false
     default: 'false'
+  source_pr_number:
+    description: 'Source PR number'
+    required: false
+  source_pr_merged:
+    description: 'Whether the source PR is already merged (true/false). If false, adds warning to target PR.'
+    required: false
+    default: 'true'
 
 outputs:
   has_diff:
@@ -97,3 +104,16 @@ runs:
         branch: ${{ inputs.target_branch }}
         delete-branch: true
         labels: ${{ inputs.labels }}
+
+    - name: PR lifecycle actions
+      if: inputs.dry_run == 'false' && steps.sync.outputs.has_diff == 'true' && inputs.source_pr_number != ''
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token || inputs.github_token }}
+      run: |
+        node ${{ github.action_path }}/dist/cli-pr.cjs \
+          --source-repo "${{ github.repository }}" \
+          --source-pr "${{ inputs.source_pr_number }}" \
+          --source-pr-merged "${{ inputs.source_pr_merged }}" \
+          --target-repo "${{ github.repository_owner }}/${{ inputs.target_repo }}" \
+          --target-pr "${{ steps.create_pr.outputs.pull-request-number }}"
