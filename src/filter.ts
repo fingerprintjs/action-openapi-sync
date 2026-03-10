@@ -141,6 +141,13 @@ function collectFileRefs(node: unknown, currentDir: string, seen: Set<string>, q
     }
   }
 
+  if (typeof node['externalValue'] === 'string') {
+    const resolved = path.normalize(path.join(currentDir, node['externalValue'])).split(path.sep).join('/')
+    if (!seen.has(resolved)) {
+      queue.push(resolved)
+    }
+  }
+
   for (const value of Object.values(node)) {
     collectFileRefs(value, currentDir, seen, queue)
   }

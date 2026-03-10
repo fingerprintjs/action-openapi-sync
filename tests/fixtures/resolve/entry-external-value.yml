@@ -1,0 +1,10 @@
+paths:
+  /events:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              examples:
+                success:
+                  externalValue: 'examples/get_200.json'

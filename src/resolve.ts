@@ -84,6 +84,9 @@ function collectRefs(node: unknown, currentDir: string, refs: string[]): void {
       // Resolve relative to current directory
       const resolved = path.normalize(path.join(currentDir, filePart)).split(path.sep).join('/')
       refs.push(resolved)
+    } else if (key === 'externalValue' && typeof value === 'string') {
+      const resolved = path.normalize(path.join(currentDir, value)).split(path.sep).join('/')
+      refs.push(resolved)
     } else {
       collectRefs(value, currentDir, refs)
     }

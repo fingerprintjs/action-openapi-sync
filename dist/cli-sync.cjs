@@ -4750,6 +4750,9 @@ function collectRefs(node, currentDir, refs) {
       }
       const resolved = path4.normalize(path4.join(currentDir, filePart)).split(path4.sep).join("/");
       refs.push(resolved);
+    } else if (key === "externalValue" && typeof value === "string") {
+      const resolved = path4.normalize(path4.join(currentDir, value)).split(path4.sep).join("/");
+      refs.push(resolved);
     } else {
       collectRefs(value, currentDir, refs);
     }
@@ -4842,6 +4845,12 @@ function collectFileRefs(node, currentDir, seen, queue) {
   if (typeof node["$ref"] === "string" && !node["$ref"].startsWith("#")) {
     const filePart = node["$ref"].split("#")[0];
     const resolved = path5.normalize(path5.join(currentDir, filePart)).split(path5.sep).join("/");
+    if (!seen.has(resolved)) {
+      queue.push(resolved);
+    }
+  }
+  if (typeof node["externalValue"] === "string") {
+    const resolved = path5.normalize(path5.join(currentDir, node["externalValue"])).split(path5.sep).join("/");
     if (!seen.has(resolved)) {
       queue.push(resolved);
     }

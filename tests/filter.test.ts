@@ -867,6 +867,19 @@ describe('removeOrphanedFiles', () => {
     expect(filtered.has('unlinked.yml')).toBe(false)
   })
 
+  it('follows externalValue references', () => {
+    const filtered = new Map([
+      ['entry.yml', yaml.dump({ allOf: [{ $ref: './a.yml' }, { externalValue: 'data.json' }] })],
+      ['a.yml', yaml.dump({ externalValue: 'data.json' })],
+      ['data.json', '{"id": 1}'],
+    ])
+
+    const orphaned = removeOrphanedFiles(filtered, 'entry.yml')
+
+    expect(orphaned).toEqual([])
+    expect(filtered.size).toBe(3)
+  })
+
   it('handles refs in nested directories', () => {
     const filtered = new Map([
       ['api/entry.yml', yaml.dump({ $ref: '../components/schema.yml' })],

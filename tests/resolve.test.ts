@@ -177,6 +177,20 @@ describe('resolveRefs', () => {
     await fs.rm(tmpDir, { recursive: true })
   })
 
+  it('follows externalValue references', async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'resolve-external-value-'))
+
+    await fs.writeFile(path.join(tmpDir, 'entry.yml'), readFixture('entry-external-value.yml'))
+    await fs.mkdir(path.join(tmpDir, 'examples'), { recursive: true })
+    await fs.writeFile(path.join(tmpDir, 'examples', 'get_200.json'), '{"id": 1}')
+
+    const files = await resolveRefs('entry.yml', tmpDir)
+    expect(files.has('entry.yml')).toBe(true)
+    expect(files.has('examples/get_200.json')).toBe(true)
+
+    await fs.rm(tmpDir, { recursive: true })
+  })
+
   it('skips $ref with empty string value', async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'resolve-empty-string-'))
 
