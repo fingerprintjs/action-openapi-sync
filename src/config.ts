@@ -85,6 +85,13 @@ function validateFileMapping(raw: unknown, index: number): FileMapping {
     mapping.target_dir = raw.target_dir
   }
 
+  if (raw.exclude_from_deletion !== undefined) {
+    if (!isStringArray(raw.exclude_from_deletion)) {
+      throw new Error(`file_mappings[${index}].exclude_from_deletion must be an array of strings`)
+    }
+    mapping.exclude_from_deletion = raw.exclude_from_deletion
+  }
+
   const hasExact = mapping.source !== undefined && mapping.target !== undefined
   const hasDir = mapping.source_dir !== undefined && mapping.target_dir !== undefined
 
@@ -142,6 +149,22 @@ export function mapSourceToTarget(config: SyncConfig, sourcePath: string): strin
   }
 
   return null
+}
+
+/** Build a list of glob patterns that should be excluded from deletion. */
+export function getExclusionPatterns(config: SyncConfig): string[] {
+  const patterns: string[] = []
+
+  for (const mapping of config.file_mappings) {
+    if (mapping.exclude_from_deletion && mapping.target_dir !== undefined) {
+      const prefix = mapping.target_dir.endsWith('/') ? mapping.target_dir : mapping.target_dir + '/'
+      for (const pattern of mapping.exclude_from_deletion) {
+        patterns.push(prefix + pattern)
+      }
+    }
+  }
+
+  return patterns
 }
 
 /** Extract all unique target directories from file_mappings. */

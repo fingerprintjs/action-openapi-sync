@@ -10,6 +10,8 @@ file_mappings:
 
   - source_dir: api/v2/paths
     target_dir: schemas/paths
+    exclude_from_deletion:
+      - 'examples/**'
 
 internal:
   internal_marker: x-internal

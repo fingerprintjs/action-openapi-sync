@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { loadConfig, mapSourceToTarget, getManagedTargetDirs } from '../src/config'
+import { loadConfig, mapSourceToTarget, getManagedTargetDirs, getExclusionPatterns } from '../src/config'
 import type { SyncConfig } from '../src/types'
 import os from 'node:os'
 import fs from 'node:fs'
@@ -24,6 +24,11 @@ describe('loadConfig', () => {
     expect(config.file_mappings[1]).toEqual({
       source_dir: 'api/v2/components',
       target_dir: 'schemas/components',
+    })
+    expect(config.file_mappings[2]).toEqual({
+      source_dir: 'api/v2/paths',
+      target_dir: 'schemas/paths',
+      exclude_from_deletion: ['examples/**'],
     })
     expect(config.internal.internal_marker).toBe('x-internal')
     expect(config.internal.strip_fields).toEqual(['x-internal'])
@@ -77,6 +82,7 @@ describe('loadConfig', () => {
     ${'invalid-internal-bad-marker.yml'}    | ${'internal_marker'}
     ${'invalid-internal-bad-strip.yml'}     | ${'strip_fields'}
     ${'invalid-internal-bad-patterns.yml'}  | ${'exclude_patterns'}
+    ${'invalid-mapping-bad-exclude.yml'}    | ${'exclude_from_deletion must be an array of strings'}
   `('throws "$expectedError" for $fixture', ({ fixture, expectedError }) => {
     expect(() => loadConfig(path.join(fixturesDir, fixture))).toThrow(expectedError)
   })
@@ -130,6 +136,57 @@ describe('mapSourceToTarget', () => {
     expect(mapSourceToTarget(configWithSlash, 'api/v2/components/schemas/Pet.yml')).toBe(
       'schemas/components/schemas/Pet.yml'
     )
+  })
+})
+
+describe('getExclusionPatterns', () => {
+  it('builds full patterns', () => {
+    const config: SyncConfig = {
+      entrypoint: 'api.yml',
+      mode: 'multi_file',
+      file_mappings: [
+        { source_dir: 'api/paths', target_dir: 'schemas/paths', exclude_from_deletion: ['examples/**'] },
+        { source_dir: 'api/components', target_dir: 'schemas/components' },
+      ],
+      internal: { internal_marker: 'x-internal', strip_fields: [], exclude_patterns: [] },
+    }
+
+    expect(getExclusionPatterns(config)).toEqual(['schemas/paths/examples/**'])
+  })
+
+  it('returns empty array when no mappings have exclude_from_deletion', () => {
+    const config: SyncConfig = {
+      entrypoint: 'api.yml',
+      mode: 'multi_file',
+      file_mappings: [{ source_dir: 'api/paths', target_dir: 'schemas/paths' }],
+      internal: { internal_marker: 'x-internal', strip_fields: [], exclude_patterns: [] },
+    }
+
+    expect(getExclusionPatterns(config)).toEqual([])
+  })
+
+  it('handles target_dir with trailing slash', () => {
+    const config: SyncConfig = {
+      entrypoint: 'api.yml',
+      mode: 'multi_file',
+      file_mappings: [
+        { source_dir: 'api/paths', target_dir: 'schemas/paths/', exclude_from_deletion: ['examples/**'] },
+      ],
+      internal: { internal_marker: 'x-internal', strip_fields: [], exclude_patterns: [] },
+    }
+
+    expect(getExclusionPatterns(config)).toEqual(['schemas/paths/examples/**'])
+  })
+
+  it('ignores exclude_from_deletion on target file mappings', () => {
+    const config: SyncConfig = {
+      entrypoint: 'api.yml',
+      mode: 'multi_file',
+      file_mappings: [{ source: 'api.yml', target: 'schemas/api.yml', exclude_from_deletion: ['something'] }],
+      internal: { internal_marker: 'x-internal', strip_fields: [], exclude_patterns: [] },
+    }
+
+    expect(getExclusionPatterns(config)).toEqual([])
   })
 })
 

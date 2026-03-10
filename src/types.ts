@@ -3,6 +3,7 @@ export interface FileMapping {
   target?: string
   source_dir?: string
   target_dir?: string
+  exclude_from_deletion?: string[]
 }
 
 export interface InternalConfig {

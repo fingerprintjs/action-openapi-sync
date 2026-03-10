@@ -1,0 +1,9 @@
+entrypoint: api/v2/petstore-api.yml
+file_mappings:
+  - source_dir: api/v2/paths
+    target_dir: schemas/paths
+    exclude_from_deletion: 'not-an-array'
+internal:
+  internal_marker: x-internal
+  strip_fields: [x-internal]
+  exclude_patterns: []

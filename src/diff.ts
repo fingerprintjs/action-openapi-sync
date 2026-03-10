@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { minimatch } from 'minimatch'
 import type { DiffResult } from './types'
 
 /** Normalize content. */
@@ -38,8 +39,14 @@ function collectFiles(dir: string, baseDir: string): string[] {
  * @param newFiles - Map of target paths to new content
  * @param targetRoot - Absolute path to the target root
  * @param managedDirs - List of target paths to detect deleted files
+ * @param excludeFromDeletion - Glob patterns for files to exclude from deletion
  */
-export function computeDiff(newFiles: Map<string, string>, targetRoot: string, managedDirs: string[]): DiffResult {
+export function computeDiff(
+  newFiles: Map<string, string>,
+  targetRoot: string,
+  managedDirs: string[],
+  excludeFromDeletion: string[] = []
+): DiffResult {
   const added: string[] = []
   const modified: string[] = []
   const deleted: string[] = []
@@ -71,8 +78,10 @@ export function computeDiff(newFiles: Map<string, string>, targetRoot: string, m
     }
   }
 
-  // Deduplicate deleted files
-  const uniqueDeleted = [...new Set(deleted)]
+  // Filter excluded files
+  const uniqueDeleted = [...new Set(deleted)].filter(
+    (file) => !excludeFromDeletion.some((pattern) => minimatch(file, pattern))
+  )
   uniqueDeleted.sort()
   added.sort()
   modified.sort()

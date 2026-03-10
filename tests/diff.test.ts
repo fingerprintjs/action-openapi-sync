@@ -189,6 +189,30 @@ info:\r
     expect(result.deleted.length).toBe(1)
   })
 
+  it('excludes files matching exclude_from_deletion patterns', () => {
+    writeTargetFile('schemas/paths/get-pet.yml', 'get: /pet\n')
+    writeTargetFile('schemas/paths/examples/pets/get_pet_200.json', '{"id": 1}\n')
+    writeTargetFile('schemas/paths/examples/pets/list_pets_200.json', '[{"id": 1}]\n')
+
+    const newFiles = new Map([['schemas/paths/get-pet.yml', 'get: /pet\n']])
+    const result = computeDiff(newFiles, targetRoot, ['schemas/paths'], ['schemas/paths/examples/**'])
+
+    expect(result.hasDiff).toBe(false)
+    expect(result.deleted).toEqual([])
+  })
+
+  it('deletes non-excluded files', () => {
+    writeTargetFile('schemas/paths/get-pet.yml', 'get: /pet\n')
+    writeTargetFile('schemas/paths/old-endpoint.yml', 'old\n')
+    writeTargetFile('schemas/paths/examples/test.json', '{"test": true}\n')
+
+    const newFiles = new Map([['schemas/paths/get-pet.yml', 'get: /pet\n']])
+    const result = computeDiff(newFiles, targetRoot, ['schemas/paths'], ['schemas/paths/examples/**'])
+
+    expect(result.hasDiff).toBe(true)
+    expect(result.deleted).toEqual(['schemas/paths/old-endpoint.yml'])
+  })
+
   it('formats summary with multiple counts', () => {
     writeTargetFile('schemas/a.yml', 'old-a\n')
     writeTargetFile('schemas/b.yml', 'old-b\n')

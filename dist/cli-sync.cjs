@@ -2687,6 +2687,12 @@ function validateFileMapping(raw, index) {
     }
     mapping.target_dir = raw.target_dir;
   }
+  if (raw.exclude_from_deletion !== void 0) {
+    if (!isStringArray(raw.exclude_from_deletion)) {
+      throw new Error(`file_mappings[${index}].exclude_from_deletion must be an array of strings`);
+    }
+    mapping.exclude_from_deletion = raw.exclude_from_deletion;
+  }
   const hasExact = mapping.source !== void 0 && mapping.target !== void 0;
   const hasDir = mapping.source_dir !== void 0 && mapping.target_dir !== void 0;
   if (!hasExact && !hasDir) {
@@ -2733,6 +2739,18 @@ function mapSourceToTarget(config, sourcePath) {
   }
   return null;
 }
+function getExclusionPatterns(config) {
+  const patterns = [];
+  for (const mapping of config.file_mappings) {
+    if (mapping.exclude_from_deletion && mapping.target_dir !== void 0) {
+      const prefix = mapping.target_dir.endsWith("/") ? mapping.target_dir : mapping.target_dir + "/";
+      for (const pattern of mapping.exclude_from_deletion) {
+        patterns.push(prefix + pattern);
+      }
+    }
+  }
+  return patterns;
+}
 function getManagedTargetDirs(config) {
   const dirs = /* @__PURE__ */ new Set();
   for (const mapping of config.file_mappings) {
@@ -2751,188 +2769,7 @@ function getManagedTargetDirs(config) {
 
 // src/diff.ts
 var fs2 = __toESM(require("node:fs"), 1);
-var path2 = __toESM(require("node:path"), 1);
-function normalizeContent(content) {
-  return content.split("\n").map((line) => line.trimEnd()).join("\n").trimEnd();
-}
-function collectFiles(dir, baseDir) {
-  const results = [];
-  if (!fs2.existsSync(dir)) {
-    return results;
-  }
-  const entries = fs2.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path2.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...collectFiles(fullPath, baseDir));
-    } else {
-      results.push(path2.relative(baseDir, fullPath).split(path2.sep).join("/"));
-    }
-  }
-  return results;
-}
-function computeDiff(newFiles, targetRoot, managedDirs) {
-  const added = [];
-  const modified = [];
-  const deleted = [];
-  for (const [targetPath, newContent] of newFiles) {
-    const absPath = path2.resolve(targetRoot, targetPath);
-    if (!fs2.existsSync(absPath)) {
-      added.push(targetPath);
-      continue;
-    }
-    const existingContent = fs2.readFileSync(absPath, "utf-8");
-    if (normalizeContent(existingContent) !== normalizeContent(newContent)) {
-      modified.push(targetPath);
-    }
-  }
-  for (const managedDir of managedDirs) {
-    const absDir = path2.resolve(targetRoot, managedDir);
-    const existingFiles = collectFiles(absDir, targetRoot);
-    for (const existingFile of existingFiles) {
-      if (!newFiles.has(existingFile)) {
-        deleted.push(existingFile);
-      }
-    }
-  }
-  const uniqueDeleted = [...new Set(deleted)];
-  uniqueDeleted.sort();
-  added.sort();
-  modified.sort();
-  const hasDiff = added.length > 0 || modified.length > 0 || uniqueDeleted.length > 0;
-  const parts = [];
-  if (modified.length > 0) {
-    parts.push(`${modified.length} file(s) modified`);
-  }
-  if (added.length > 0) {
-    parts.push(`${added.length} file(s) added`);
-  }
-  if (uniqueDeleted.length > 0) {
-    parts.push(`${uniqueDeleted.length} file(s) deleted`);
-  }
-  const summary = parts.length > 0 ? parts.join(", ") : "No changes";
-  return { hasDiff, added, modified, deleted: uniqueDeleted, summary };
-}
-
-// src/github.ts
-var fs3 = __toESM(require("node:fs"), 1);
-function setOutput(name, value) {
-  const outputFile = process.env.GITHUB_OUTPUT;
-  if (outputFile) {
-    const delimiter = "EOF_OPENAPI_SYNC";
-    fs3.appendFileSync(outputFile, `${name}<<${delimiter}
-${value}
-${delimiter}
-`);
-  }
-}
-function formatFileSection(title, files) {
-  return ["", "<details>", `<summary>${title}</summary>`, "", ...files.map((f) => `- \`${f}\``), "", "</details>"];
-}
-function generatePrBody(diff) {
-  const lines = [
-    "This PR automatically updates the OpenAPI schema.",
-    "",
-    "### Changes",
-    "",
-    `**${diff.summary}**`
-  ];
-  if (diff.modified.length > 0) {
-    lines.push(...formatFileSection("Modified files", diff.modified));
-  }
-  if (diff.added.length > 0) {
-    lines.push(...formatFileSection("Added files", diff.added));
-  }
-  if (diff.deleted.length > 0) {
-    lines.push(...formatFileSection("Deleted files", diff.deleted));
-  }
-  lines.push(
-    "",
-    "---",
-    "",
-    "**Note for reviewers**: Please review the schema changes.",
-    "You _likely_ need to manually add a changeset file to this branch before merging."
-  );
-  return lines.join("\n");
-}
-
-// src/sync.ts
-var fs5 = __toESM(require("node:fs"), 1);
-var path6 = __toESM(require("node:path"), 1);
-
-// src/resolve.ts
-var fs4 = __toESM(require("node:fs/promises"), 1);
 var path3 = __toESM(require("node:path"), 1);
-async function resolveRefs(entrypoint, sourceRoot) {
-  const visited = /* @__PURE__ */ new Set();
-  const normalizedEntry = path3.relative(sourceRoot, path3.resolve(sourceRoot, entrypoint));
-  await walkFile(normalizedEntry, sourceRoot, visited);
-  return visited;
-}
-async function walkFile(relPath, sourceRoot, visited) {
-  if (visited.has(relPath)) {
-    return;
-  }
-  visited.add(relPath);
-  const absPath = path3.resolve(sourceRoot, relPath);
-  let content;
-  try {
-    content = await fs4.readFile(absPath, "utf-8");
-  } catch {
-    console.warn(`Warning: Referenced file not found: ${relPath}`);
-    return;
-  }
-  const ext2 = path3.extname(relPath).toLowerCase();
-  if (ext2 !== ".yaml" && ext2 !== ".yml") {
-    return;
-  }
-  let doc;
-  try {
-    doc = load(content);
-  } catch {
-    console.warn(`Warning: Failed to parse YAML in: ${relPath}`);
-    return;
-  }
-  const currentDir = path3.dirname(relPath);
-  const refs = extractFileRefs(doc, currentDir);
-  for (const ref of refs) {
-    await walkFile(ref, sourceRoot, visited);
-  }
-}
-function extractFileRefs(node, currentDir) {
-  const refs = [];
-  collectRefs(node, currentDir, refs);
-  return refs;
-}
-function collectRefs(node, currentDir, refs) {
-  if (Array.isArray(node)) {
-    for (const item of node) {
-      collectRefs(item, currentDir, refs);
-    }
-    return;
-  }
-  if (typeof node !== "object" || node === null) {
-    return;
-  }
-  for (const [key, value] of Object.entries(node)) {
-    if (key === "$ref" && typeof value === "string") {
-      if (value.startsWith("#")) {
-        continue;
-      }
-      const filePart = value.split("#")[0];
-      if (filePart.length === 0) {
-        continue;
-      }
-      const resolved = path3.normalize(path3.join(currentDir, filePart)).split(path3.sep).join("/");
-      refs.push(resolved);
-    } else {
-      collectRefs(value, currentDir, refs);
-    }
-  }
-}
-
-// src/filter.ts
-var path5 = __toESM(require("node:path"), 1);
 
 // node_modules/.pnpm/balanced-match@4.0.4/node_modules/balanced-match/dist/esm/index.js
 var balanced = (a, b, str2) => {
@@ -3992,12 +3829,12 @@ var qmarksTestNoExtDot = ([$0]) => {
   return (f) => f.length === len && f !== "." && f !== "..";
 };
 var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-var path4 = {
+var path2 = {
   win32: { sep: "\\" },
   posix: { sep: "/" }
 };
-var sep3 = defaultPlatform === "win32" ? path4.win32.sep : path4.posix.sep;
-minimatch.sep = sep3;
+var sep = defaultPlatform === "win32" ? path2.win32.sep : path2.posix.sep;
+minimatch.sep = sep;
 var GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
 minimatch.GLOBSTAR = GLOBSTAR;
 var qmark2 = "[^/]";
@@ -4743,7 +4580,190 @@ minimatch.Minimatch = Minimatch;
 minimatch.escape = escape;
 minimatch.unescape = unescape;
 
+// src/diff.ts
+function normalizeContent(content) {
+  return content.split("\n").map((line) => line.trimEnd()).join("\n").trimEnd();
+}
+function collectFiles(dir, baseDir) {
+  const results = [];
+  if (!fs2.existsSync(dir)) {
+    return results;
+  }
+  const entries = fs2.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path3.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...collectFiles(fullPath, baseDir));
+    } else {
+      results.push(path3.relative(baseDir, fullPath).split(path3.sep).join("/"));
+    }
+  }
+  return results;
+}
+function computeDiff(newFiles, targetRoot, managedDirs, excludeFromDeletion = []) {
+  const added = [];
+  const modified = [];
+  const deleted = [];
+  for (const [targetPath, newContent] of newFiles) {
+    const absPath = path3.resolve(targetRoot, targetPath);
+    if (!fs2.existsSync(absPath)) {
+      added.push(targetPath);
+      continue;
+    }
+    const existingContent = fs2.readFileSync(absPath, "utf-8");
+    if (normalizeContent(existingContent) !== normalizeContent(newContent)) {
+      modified.push(targetPath);
+    }
+  }
+  for (const managedDir of managedDirs) {
+    const absDir = path3.resolve(targetRoot, managedDir);
+    const existingFiles = collectFiles(absDir, targetRoot);
+    for (const existingFile of existingFiles) {
+      if (!newFiles.has(existingFile)) {
+        deleted.push(existingFile);
+      }
+    }
+  }
+  const uniqueDeleted = [...new Set(deleted)].filter(
+    (file) => !excludeFromDeletion.some((pattern) => minimatch(file, pattern))
+  );
+  uniqueDeleted.sort();
+  added.sort();
+  modified.sort();
+  const hasDiff = added.length > 0 || modified.length > 0 || uniqueDeleted.length > 0;
+  const parts = [];
+  if (modified.length > 0) {
+    parts.push(`${modified.length} file(s) modified`);
+  }
+  if (added.length > 0) {
+    parts.push(`${added.length} file(s) added`);
+  }
+  if (uniqueDeleted.length > 0) {
+    parts.push(`${uniqueDeleted.length} file(s) deleted`);
+  }
+  const summary = parts.length > 0 ? parts.join(", ") : "No changes";
+  return { hasDiff, added, modified, deleted: uniqueDeleted, summary };
+}
+
+// src/github.ts
+var fs3 = __toESM(require("node:fs"), 1);
+function setOutput(name, value) {
+  const outputFile = process.env.GITHUB_OUTPUT;
+  if (outputFile) {
+    const delimiter = "EOF_OPENAPI_SYNC";
+    fs3.appendFileSync(outputFile, `${name}<<${delimiter}
+${value}
+${delimiter}
+`);
+  }
+}
+function formatFileSection(title, files) {
+  return ["", "<details>", `<summary>${title}</summary>`, "", ...files.map((f) => `- \`${f}\``), "", "</details>"];
+}
+function generatePrBody(diff) {
+  const lines = [
+    "This PR automatically updates the OpenAPI schema.",
+    "",
+    "### Changes",
+    "",
+    `**${diff.summary}**`
+  ];
+  if (diff.modified.length > 0) {
+    lines.push(...formatFileSection("Modified files", diff.modified));
+  }
+  if (diff.added.length > 0) {
+    lines.push(...formatFileSection("Added files", diff.added));
+  }
+  if (diff.deleted.length > 0) {
+    lines.push(...formatFileSection("Deleted files", diff.deleted));
+  }
+  lines.push(
+    "",
+    "---",
+    "",
+    "**Note for reviewers**: Please review the schema changes.",
+    "You _likely_ need to manually add a changeset file to this branch before merging."
+  );
+  return lines.join("\n");
+}
+
+// src/sync.ts
+var fs5 = __toESM(require("node:fs"), 1);
+var path6 = __toESM(require("node:path"), 1);
+
+// src/resolve.ts
+var fs4 = __toESM(require("node:fs/promises"), 1);
+var path4 = __toESM(require("node:path"), 1);
+async function resolveRefs(entrypoint, sourceRoot) {
+  const visited = /* @__PURE__ */ new Set();
+  const normalizedEntry = path4.relative(sourceRoot, path4.resolve(sourceRoot, entrypoint));
+  await walkFile(normalizedEntry, sourceRoot, visited);
+  return visited;
+}
+async function walkFile(relPath, sourceRoot, visited) {
+  if (visited.has(relPath)) {
+    return;
+  }
+  visited.add(relPath);
+  const absPath = path4.resolve(sourceRoot, relPath);
+  let content;
+  try {
+    content = await fs4.readFile(absPath, "utf-8");
+  } catch {
+    console.warn(`Warning: Referenced file not found: ${relPath}`);
+    return;
+  }
+  const ext2 = path4.extname(relPath).toLowerCase();
+  if (ext2 !== ".yaml" && ext2 !== ".yml") {
+    return;
+  }
+  let doc;
+  try {
+    doc = load(content);
+  } catch {
+    console.warn(`Warning: Failed to parse YAML in: ${relPath}`);
+    return;
+  }
+  const currentDir = path4.dirname(relPath);
+  const refs = extractFileRefs(doc, currentDir);
+  for (const ref of refs) {
+    await walkFile(ref, sourceRoot, visited);
+  }
+}
+function extractFileRefs(node, currentDir) {
+  const refs = [];
+  collectRefs(node, currentDir, refs);
+  return refs;
+}
+function collectRefs(node, currentDir, refs) {
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      collectRefs(item, currentDir, refs);
+    }
+    return;
+  }
+  if (typeof node !== "object" || node === null) {
+    return;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "$ref" && typeof value === "string") {
+      if (value.startsWith("#")) {
+        continue;
+      }
+      const filePart = value.split("#")[0];
+      if (filePart.length === 0) {
+        continue;
+      }
+      const resolved = path4.normalize(path4.join(currentDir, filePart)).split(path4.sep).join("/");
+      refs.push(resolved);
+    } else {
+      collectRefs(value, currentDir, refs);
+    }
+  }
+}
+
 // src/filter.ts
+var path5 = __toESM(require("node:path"), 1);
 var yamlDumpConfig = {
   lineWidth: -1,
   noRefs: true,
@@ -5097,8 +5117,9 @@ async function runSync() {
   console.log(`Mode: ${config.mode}, Entrypoint: ${config.entrypoint}`);
   const targetFiles = config.mode === "multi_file" ? await syncMultiFile(config, sourceRoot) : syncBundled(config, sourceRoot);
   const managedDirs = getManagedTargetDirs(config);
+  const excludeFromDeletion = getExclusionPatterns(config);
   console.log("Computing diff...");
-  const diff = computeDiff(targetFiles, targetRoot, managedDirs);
+  const diff = computeDiff(targetFiles, targetRoot, managedDirs, excludeFromDeletion);
   setOutput("has_diff", String(diff.hasDiff));
   setOutput("diff_summary", diff.summary);
   if (!diff.hasDiff) {

@@ -1,5 +1,5 @@
 import { parseArgs } from 'node:util'
-import { loadConfig, getManagedTargetDirs } from './config'
+import { loadConfig, getManagedTargetDirs, getExclusionPatterns } from './config'
 import { computeDiff } from './diff'
 import { setOutput, generatePrBody } from './github'
 import { syncMultiFile, syncBundled } from './sync'
@@ -35,8 +35,9 @@ async function runSync(): Promise<void> {
     config.mode === 'multi_file' ? await syncMultiFile(config, sourceRoot) : syncBundled(config, sourceRoot)
 
   const managedDirs = getManagedTargetDirs(config)
+  const excludeFromDeletion = getExclusionPatterns(config)
   console.log('Computing diff...')
-  const diff = computeDiff(targetFiles, targetRoot, managedDirs)
+  const diff = computeDiff(targetFiles, targetRoot, managedDirs, excludeFromDeletion)
 
   setOutput('has_diff', String(diff.hasDiff))
   setOutput('diff_summary', diff.summary)
