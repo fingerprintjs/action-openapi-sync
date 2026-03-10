@@ -2757,12 +2757,6 @@ function getManagedTargetDirs(config) {
     if (mapping.target_dir !== void 0) {
       dirs.add(mapping.target_dir);
     }
-    if (mapping.target !== void 0) {
-      const dir = path.posix.dirname(mapping.target);
-      if (dir !== ".") {
-        dirs.add(dir);
-      }
-    }
   }
   return [...dirs];
 }

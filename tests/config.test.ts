@@ -204,10 +204,9 @@ describe('getManagedTargetDirs', () => {
     }
 
     const dirs = getManagedTargetDirs(config)
-    expect(dirs).toContain('schemas')
     expect(dirs).toContain('schemas/components')
     expect(dirs).toContain('schemas/paths')
-    expect(dirs).toHaveLength(3)
+    expect(dirs).toHaveLength(2)
   })
 
   it('deduplicates directories', () => {
@@ -215,8 +214,8 @@ describe('getManagedTargetDirs', () => {
       entrypoint: 'api/v2/petstore-api.yml',
       mode: 'multi_file',
       file_mappings: [
-        { source: 'api/v2/a.yml', target: 'schemas/a.yml' },
-        { source: 'api/v2/b.yml', target: 'schemas/b.yml' },
+        { source_dir: 'api/v2/a', target_dir: 'schemas' },
+        { source_dir: 'api/v2/b', target_dir: 'schemas' },
       ],
       internal: { internal_marker: 'x-internal', strip_fields: [], exclude_patterns: [] },
     }
@@ -225,19 +224,7 @@ describe('getManagedTargetDirs', () => {
     expect(dirs).toEqual(['schemas'])
   })
 
-  it('excludes root-level targets from managed dirs', () => {
-    const config: SyncConfig = {
-      entrypoint: 'e.yaml',
-      mode: 'multi_file',
-      file_mappings: [{ source: 'e.yaml', target: 'schema.yaml' }],
-      internal: { internal_marker: 'x-internal', strip_fields: [], exclude_patterns: [] },
-    }
-
-    const dirs = getManagedTargetDirs(config)
-    expect(dirs).toEqual([])
-  })
-
-  it('includes dirname of exact file targets', () => {
+  it('does not include parent dir of exact file targets', () => {
     const config: SyncConfig = {
       entrypoint: 'e.yml',
       mode: 'multi_file',
@@ -246,6 +233,6 @@ describe('getManagedTargetDirs', () => {
     }
 
     const dirs = getManagedTargetDirs(config)
-    expect(dirs).toContain('out/nested')
+    expect(dirs).toEqual([])
   })
 })

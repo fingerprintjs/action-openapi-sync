@@ -175,12 +175,6 @@ export function getManagedTargetDirs(config: SyncConfig): string[] {
     if (mapping.target_dir !== undefined) {
       dirs.add(mapping.target_dir)
     }
-    if (mapping.target !== undefined) {
-      const dir = path.posix.dirname(mapping.target)
-      if (dir !== '.') {
-        dirs.add(dir)
-      }
-    }
   }
 
   return [...dirs]
