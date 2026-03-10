@@ -1,0 +1,5 @@
+refs:
+  a:
+    $ref: './exists.yml'
+  b:
+    $ref: './missing.yml'

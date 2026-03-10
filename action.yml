@@ -1,0 +1,99 @@
+name: OpenAPI Sync
+description: GitHub Action that synchronizes OpenAPI schema files between repositories
+
+inputs:
+  config_path:
+    description: 'Path to the sync config file relative to source repo root'
+    required: true
+  target_repo:
+    description: 'Target repository name. Must be under the same owner as the source repo.'
+    required: true
+  target_branch:
+    description: 'Branch name for the PR in target repo'
+    required: true
+  github_token:
+    description: 'GitHub token for target repo access and PR operations. Not needed if app_id and app_private_key are provided.'
+    required: false
+  app_id:
+    description: 'GitHub App ID for generating a token'
+    required: false
+  app_private_key:
+    description: 'GitHub App private key for generating a token'
+    required: false
+  pr_title:
+    description: 'Pull Request title'
+    required: false
+    default: 'Sync OpenAPI Schema'
+  commit_message:
+    description: 'Commit message'
+    required: false
+    default: 'chore: sync OpenAPI schema'
+  labels:
+    description: 'Comma-separated PR labels'
+    required: false
+    default: ''
+  dry_run:
+    description: 'Only report diff'
+    required: false
+    default: 'false'
+
+outputs:
+  has_diff:
+    description: 'Whether meaningful changes were detected'
+    value: ${{ steps.sync.outputs.has_diff }}
+  diff_summary:
+    description: 'Summary of changes'
+    value: ${{ steps.sync.outputs.diff_summary }}
+  target_pr_number:
+    description: 'PR number created/updated in target repo'
+    value: ${{ steps.create_pr.outputs.pull-request-number }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate token from GitHub App
+      id: app-token
+      if: inputs.app_id != '' && inputs.app_private_key != ''
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ inputs.app_id }}
+        private-key: ${{ inputs.app_private_key }}
+        repositories: ${{ github.event.repository.name }},${{ inputs.target_repo }}
+
+    - name: Checkout target repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ steps.app-token.outputs.token || inputs.github_token }}
+        repository: ${{ github.repository_owner }}/${{ inputs.target_repo }}
+        path: target
+        persist-credentials: false
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+
+    - name: Run OpenAPI Sync
+      id: sync
+      shell: bash
+      run: |
+        node ${{ github.action_path }}/dist/cli-sync.cjs \
+          --config "source/${{ inputs.config_path }}" \
+          --source-root "source" \
+          --target-root "target" \
+          ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
+
+    - name: Create or Update Pull Request
+      id: create_pr
+      if: inputs.dry_run == 'false' && steps.sync.outputs.has_diff == 'true'
+      uses: peter-evans/create-pull-request@v6
+      with:
+        path: target
+        token: ${{ steps.app-token.outputs.token || inputs.github_token }}
+        commit-message: ${{ inputs.commit_message }}
+        title: ${{ inputs.pr_title }}
+        body: ${{ steps.sync.outputs.pr_body }}
+        branch: ${{ inputs.target_branch }}
+        delete-branch: true
+        labels: ${{ inputs.labels }}

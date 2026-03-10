@@ -1,0 +1,4 @@
+components:
+  schemas:
+    Foo:
+      $ref: './models.yml#/schemas/Foo'

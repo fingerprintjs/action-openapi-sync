@@ -1,0 +1,6 @@
+components:
+  schemas:
+    Foo:
+      $ref: '#/components/schemas/Bar'
+    Bar:
+      type: string

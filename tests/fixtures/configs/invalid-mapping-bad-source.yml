@@ -1,0 +1,10 @@
+entrypoint: api/server-api.yml
+mode: multi_file
+file_mappings:
+  - source: 123
+    target: out.yml
+internal:
+  internal_marker: x-internal
+  strip_fields:
+    - x-internal
+  exclude_patterns: []

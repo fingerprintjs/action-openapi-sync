@@ -1,0 +1,18 @@
+entrypoint: api/v2/petstore-api.yml
+mode: multi_file
+
+file_mappings:
+  - source: api/v2/petstore-api.yml
+    target: schemas/petstore-api-v2.yml
+
+  - source_dir: api/v2/components
+    target_dir: schemas/components
+
+  - source_dir: api/v2/paths
+    target_dir: schemas/paths
+
+internal:
+  internal_marker: x-internal
+  strip_fields:
+    - x-internal
+  exclude_patterns: []

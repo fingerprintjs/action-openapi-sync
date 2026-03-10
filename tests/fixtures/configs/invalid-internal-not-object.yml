@@ -1,0 +1,6 @@
+entrypoint: api/server-api.yml
+mode: multi_file
+file_mappings:
+  - source: api.yml
+    target: out.yml
+internal: 'not an object'

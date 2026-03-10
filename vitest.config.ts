@@ -8,6 +8,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.ts'],
       reporter: ['text', 'json', 'json-summary', 'lcov', 'html', 'clover'],
+      exclude: ['src/types.ts', 'src/cli-*.ts'],
     },
   },
 })
