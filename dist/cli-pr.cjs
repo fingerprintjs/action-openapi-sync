@@ -42,17 +42,32 @@ async function upsertComment(repo, prNumber, tag, body, token) {
   }
 }
 async function findComment(repo, prNumber, tag, token) {
-  const url = `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`;
-  const response = await githubApi("GET", url, token);
-  if (!response.ok) {
-    console.warn(`Warning: Failed to list comments on ${repo}#${prNumber}: ${response.status}`);
+  let url = `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`;
+  while (url) {
+    const response = await githubApi("GET", url, token);
+    if (!response.ok) {
+      console.warn(`Warning: Failed to list comments on ${repo}#${prNumber}: ${response.status}`);
+      return null;
+    }
+    const comments = await response.json();
+    if (!Array.isArray(comments)) {
+      return null;
+    }
+    const found = comments.find((c) => c.body.includes(tag));
+    if (found) {
+      return found;
+    }
+    url = getNextPageUrl(response);
+  }
+  return null;
+}
+function getNextPageUrl(response) {
+  const link = response.headers.get("link");
+  if (!link) {
     return null;
   }
-  const comments = await response.json();
-  if (!Array.isArray(comments)) {
-    return null;
-  }
-  return comments.find((c) => c.body.includes(tag)) ?? null;
+  const match = link.match(/<([^>]+)>;\s*rel="next"/);
+  return match?.[1] ?? null;
 }
 async function githubApi(method, url, token, body) {
   const options = {

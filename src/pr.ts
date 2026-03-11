@@ -61,19 +61,44 @@ async function upsertComment(repo: string, prNumber: number, tag: string, body: 
 
 /** Find an existing comment on a PR by its tag. */
 async function findComment(repo: string, prNumber: number, tag: string, token: string): Promise<GitHubComment | null> {
-  const url = `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`
-  const response = await githubApi('GET', url, token)
+  let url: string | null = `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`
 
-  if (!response.ok) {
-    console.warn(`Warning: Failed to list comments on ${repo}#${prNumber}: ${response.status}`)
+  while (url) {
+    const response = await githubApi('GET', url, token)
+
+    if (!response.ok) {
+      console.warn(`Warning: Failed to list comments on ${repo}#${prNumber}: ${response.status}`)
+      return null
+    }
+
+    const comments: unknown = await response.json()
+    if (!Array.isArray(comments)) {
+      return null
+    }
+
+    const found = comments.find((c: GitHubComment) => c.body.includes(tag))
+    if (found) {
+      return found
+    }
+
+    url = getNextPageUrl(response)
+  }
+
+  return null
+}
+
+/**
+ * Extract the next page URL from the GitHub API response.
+ * Ref: https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api?apiVersion=2022-11-28
+ */
+function getNextPageUrl(response: Response): string | null {
+  const link = response.headers.get('link')
+  if (!link) {
     return null
   }
 
-  const comments: unknown = await response.json()
-  if (!Array.isArray(comments)) {
-    return null
-  }
-  return comments.find((c: GitHubComment) => c.body.includes(tag)) ?? null
+  const match = link.match(/<([^>]+)>;\s*rel="next"/)
+  return match?.[1] ?? null
 }
 
 /** Make an authenticated request to the GitHub API. */

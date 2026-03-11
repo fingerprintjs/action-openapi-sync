@@ -5,6 +5,7 @@ import type { PrOptions } from '../src/pr'
 interface MockResponse {
   status: number
   body?: unknown
+  headers?: Record<string, string>
 }
 
 function mockFetch(responses: MockResponse[]): void {
@@ -18,26 +19,30 @@ function mockFetch(responses: MockResponse[]): void {
         ok: resp.status >= 200 && resp.status < 300,
         status: resp.status,
         json: async () => resp.body ?? [],
+        headers: new Headers(resp.headers),
       }
     })
   )
 }
 
-/** Mock the 5-step fetch flow with sensible defaults. Override only the steps you care about. */
+/** Mock the GitHub API fetch flow. Override only the steps you care about. */
 function mockFetchFlow(
   overrides?: Partial<{
-    getSourceComments: MockResponse
+    getSourceComments: MockResponse | MockResponse[]
     writeSourceComment: MockResponse
     manageLabel: MockResponse
-    getTargetComments: MockResponse
+    getTargetComments: MockResponse | MockResponse[]
     writeTargetComment: MockResponse
   }>
 ): void {
+  const source = overrides?.getSourceComments ?? { status: 200, body: [] }
+  const target = overrides?.getTargetComments ?? { status: 200, body: [] }
+
   mockFetch([
-    overrides?.getSourceComments ?? { status: 200, body: [] },
+    ...(Array.isArray(source) ? source : [source]),
     overrides?.writeSourceComment ?? { status: 201 },
     overrides?.manageLabel ?? { status: 404 },
-    overrides?.getTargetComments ?? { status: 200, body: [] },
+    ...(Array.isArray(target) ? target : [target]),
     overrides?.writeTargetComment ?? { status: 201 },
   ])
 }
@@ -230,5 +235,67 @@ describe('handlePrLifecycle', () => {
       const headers = getFetchCallHeaders(i)
       expect(headers.Authorization).toBe('token my-secret-token')
     }
+  })
+
+  it('finds comment on second page', async () => {
+    const nextUrl = 'https://api.github.com/repos/owner/source/issues/42/comments?per_page=100&page=2'
+
+    mockFetchFlow({
+      getSourceComments: [
+        {
+          status: 200,
+          body: [{ id: 1, body: 'unrelated comment' }],
+          headers: { link: `<${nextUrl}>; rel="next"` },
+        },
+        { status: 200, body: [{ id: 2, body: '<!-- openapi-sync-link -->\nOld link' }] },
+      ],
+      writeSourceComment: { status: 200 },
+    })
+
+    await handlePrLifecycle(defaultOptions())
+
+    const fetchMock = vi.mocked(fetch)
+    expect(fetchMock.mock.calls[1][0]).toBe(nextUrl)
+    expect(fetchMock.mock.calls[2][0]).toContain('/issues/comments/2')
+    expect(fetchMock.mock.calls[2][1]?.method).toBe('PATCH')
+  })
+
+  it('paginates through multiple pages on target PR comments', async () => {
+    const nextUrl = 'https://api.github.com/repos/owner/target/issues/42/comments?per_page=100&page=2'
+
+    mockFetchFlow({
+      getTargetComments: [
+        {
+          status: 200,
+          body: [{ id: 1, body: 'some other comment' }],
+          headers: { link: `<${nextUrl}>; rel="next"` },
+        },
+        { status: 200, body: [{ id: 2, body: '<!-- openapi-sync-status -->\nOld status' }] },
+      ],
+      writeTargetComment: { status: 200 },
+    })
+
+    await handlePrLifecycle(defaultOptions())
+
+    const fetchMock = vi.mocked(fetch)
+    expect(fetchMock.mock.calls[4][0]).toBe(nextUrl)
+    expect(fetchMock.mock.calls[5][0]).toContain('/issues/comments/2')
+    expect(fetchMock.mock.calls[5][1]?.method).toBe('PATCH')
+  })
+
+  it('stops pagination when no more page', async () => {
+    mockFetchFlow({
+      getSourceComments: {
+        status: 200,
+        body: [{ id: 1, body: 'unrelated' }],
+        headers: { link: '<https://api.github.com/repos/owner/source/issues/42/comments?page=1>; rel="last"' },
+      },
+    })
+
+    await handlePrLifecycle(defaultOptions())
+
+    const fetchMock = vi.mocked(fetch)
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('POST')
   })
 })
