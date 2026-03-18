@@ -1,5 +1,8 @@
 name: OpenAPI Sync
 description: GitHub Action that synchronizes OpenAPI schema files between repositories
+branding:
+  icon: upload
+  color: orange
 
 inputs:
   config_path:
