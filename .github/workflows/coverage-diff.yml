@@ -33,17 +33,5 @@ jobs:
       - name: Run tests and prepare coverage report
         run: pnpm test:coverage
 
-      - name: Read coverage text report
-        uses: fingerprintjs/action-coverage-report-md@v2
-        id: coverage-md
-
       - name: Vitest coverage report
         uses: davelosert/vitest-coverage-report-action@v2
-
-      - name: Add coverage report to the job summary
-        run: |
-          {
-            echo "## Code Coverage"
-            echo ""
-            echo "${{ steps.coverage-md.outputs.markdownReport }}"
-          } >> $GITHUB_STEP_SUMMARY
