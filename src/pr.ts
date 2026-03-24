@@ -10,6 +10,7 @@ export interface PrOptions {
   targetRepo: string
   targetPrNumber: number
   sourceGithubToken?: string
+  commentOnSourcePr?: boolean
 }
 
 interface GitHubComment {
@@ -27,12 +28,13 @@ export async function handlePrLifecycle(options: PrOptions): Promise<void> {
     sourcePrMerged,
     targetRepo,
     targetPrNumber,
+    commentOnSourcePr = true,
   } = options
 
   const targetPrUrl = `https://github.com/${targetRepo}/pull/${targetPrNumber}`
 
   // Comment on source PR with link to target PR
-  if (sourceGithubToken) {
+  if (sourceGithubToken && commentOnSourcePr) {
     const linkBody = `${COMMENT_TAG_LINK}\nOpenAPI Sync PR: [${targetRepo}#${targetPrNumber}](${targetPrUrl})`
     await upsertComment(sourceRepo, sourcePrNumber, COMMENT_TAG_LINK, linkBody, sourceGithubToken)
   }

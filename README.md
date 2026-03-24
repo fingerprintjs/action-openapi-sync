@@ -69,6 +69,7 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
 | `dry_run`                  | No       | `false`                      | Only report diff, do not create PR                                                   |
 | `source_pr_number`         | No       |                              | Source PR number (for commenting on source PR with target PR link)                   |
 | `source_pr_merged`         | No       | `true`                       | Whether the source PR is merged. If `false`, adds a warning to the target PR         |
+| `comment_on_source_pr`     | No       | `true`                       | Whether to post a link comment on the source PR                                      |
 
 ## Outputs
 

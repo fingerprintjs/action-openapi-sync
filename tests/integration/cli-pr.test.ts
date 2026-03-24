@@ -58,4 +58,14 @@ describe('cli-pr', () => {
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('PR lifecycle actions completed')
   })
+
+  it('accepts --comment-on-source-pr false', async () => {
+    const result = await run([...allArgs, '--comment-on-source-pr', 'false'], {
+      TARGET_REPO_GITHUB_TOKEN: 'target-token',
+      SOURCE_REPO_GITHUB_TOKEN: 'source-token',
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('PR lifecycle actions completed')
+  })
 })

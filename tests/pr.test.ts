@@ -309,4 +309,47 @@ describe('handlePrLifecycle', () => {
     expect(fetchMock).toHaveBeenCalledTimes(5)
     expect(fetchMock.mock.calls[1][1]?.method).toBe('POST')
   })
+
+  describe('commentOnSourcePr option', () => {
+    it('skips source PR comment when commentOnSourcePr is false', async () => {
+      mockFetch([{ status: 200 }, { status: 200, body: [] }, { status: 201 }])
+
+      await handlePrLifecycle(defaultOptions({ commentOnSourcePr: false }))
+
+      const fetchMock = vi.mocked(fetch)
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+      expect(fetchMock.mock.calls[0][0]).toContain('/repos/owner/target/issues/99/labels')
+    })
+
+    it('still posts source PR comment when commentOnSourcePr is true', async () => {
+      mockFetchFlow()
+
+      await handlePrLifecycle(defaultOptions({ commentOnSourcePr: true }))
+
+      const fetchMock = vi.mocked(fetch)
+      expect(fetchMock.mock.calls[0][0]).toContain('/repos/owner/source/issues/42/comments')
+    })
+
+    it('still posts source PR comment by default', async () => {
+      mockFetchFlow()
+
+      await handlePrLifecycle(defaultOptions())
+
+      const fetchMock = vi.mocked(fetch)
+      expect(fetchMock.mock.calls[0][0]).toContain('/repos/owner/source/issues/42/comments')
+    })
+
+    it('handles target PR status correctly when source comment is skipped and source not merged', async () => {
+      mockFetch([{ status: 200 }, { status: 200, body: [] }, { status: 201 }])
+
+      await handlePrLifecycle(defaultOptions({ commentOnSourcePr: false, sourcePrMerged: false }))
+
+      const fetchMock = vi.mocked(fetch)
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+      expect(fetchMock.mock.calls[0][0]).toContain('/repos/owner/target/issues/99/labels')
+      expect(fetchMock.mock.calls[0][1]?.method).toBe('POST')
+      const commentBody = getFetchCallBody(2)
+      expect(commentBody.body).toContain('not finalized yet')
+    })
+  })
 })
