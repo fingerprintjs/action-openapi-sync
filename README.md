@@ -178,6 +178,10 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
