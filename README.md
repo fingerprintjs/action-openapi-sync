@@ -40,7 +40,7 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
     path: source
 
 - name: Sync OpenAPI Schema
-  uses: fingerprintjs/action-openapi-sync@v0.1.0
+  uses: fingerprintjs/action-openapi-sync@v0.2.0
   with:
     source_path: source
     config_path: openapi-sync.config.yaml
@@ -196,7 +196,7 @@ jobs:
           path: source
 
       - name: Sync OpenAPI
-        uses: fingerprintjs/openapi-sync-action@v0.1.0
+        uses: fingerprintjs/openapi-sync-action@v0.2.0
         with:
           source_path: source
           config_path: source/openapi-sync.config.yaml
@@ -222,7 +222,7 @@ You can also use the `actions/create-github-app-token` action to generate a GitH
     repositories: your-openapi-repo
 
 - name: Run OpenAPI Sync
-  uses: fingerprintjs/openapi-sync-action@v0.1.0
+  uses: fingerprintjs/openapi-sync-action@v0.2.0
   with:
     # ...
     target_repo_github_token: ${{ steps.app-token.outputs.token }}
