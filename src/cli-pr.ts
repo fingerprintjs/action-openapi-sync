@@ -8,6 +8,7 @@ const { values: args } = parseArgs({
     'source-pr-merged': { type: 'string', default: 'true' },
     'target-repo': { type: 'string' },
     'target-pr': { type: 'string' },
+    'comment-on-source-pr': { type: 'string', default: 'true' },
   },
   strict: true,
 })
@@ -30,6 +31,7 @@ handlePrLifecycle({
   sourcePrMerged: args['source-pr-merged'] === 'true',
   targetRepo: args['target-repo'],
   targetPrNumber: parseInt(args['target-pr'], 10),
+  commentOnSourcePr: args['comment-on-source-pr'] === 'true',
 })
   .then(() => {
     console.log('PR lifecycle actions completed.')

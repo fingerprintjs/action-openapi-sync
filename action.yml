@@ -46,6 +46,10 @@ inputs:
     description: 'Whether the source PR is already merged (true/false). If false, adds warning to target PR.'
     required: false
     default: 'true'
+  comment_on_source_pr:
+    description: 'Whether to post a link comment on the source PR (true/false).'
+    required: false
+    default: 'true'
 
 outputs:
   has_diff:
@@ -111,4 +115,5 @@ runs:
           --source-pr "${{ inputs.source_pr_number }}" \
           --source-pr-merged "${{ inputs.source_pr_merged }}" \
           --target-repo "${{ github.repository_owner }}/${{ inputs.target_repo }}" \
-          --target-pr "${{ steps.create_pr.outputs.pull-request-number }}"
+          --target-pr "${{ steps.create_pr.outputs.pull-request-number }}" \
+          --comment-on-source-pr "${{ inputs.comment_on_source_pr }}"
