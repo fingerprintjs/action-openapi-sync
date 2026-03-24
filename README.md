@@ -35,10 +35,17 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
 ## Usage
 
 ```yaml
+- uses: actions/checkout@v4
+  with:
+    path: source
+
 - name: Sync OpenAPI Schema
   uses: fingerprintjs/action-openapi-sync@main
   with:
+    source_path: source
     config_path: openapi-sync.config.yaml
+    # You can also use source repository files
+    # config_path: source/openapi-sync.config.yaml
     target_repo: your-openapi-repo
     target_branch: sync-openapi
     pr_title: 'Sync OpenAPI Schema'
@@ -50,6 +57,7 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
 
 | Input              | Required | Default                      | Description                                                                                                       |
 |--------------------|----------|------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| `source_path`      | Yes      |                              | Source repository path                                                                                            |
 | `config_path`      | Yes      |                              | Path to the sync config file relative to source repo root                                                         |
 | `target_repo`      | Yes      |                              | Target repository name. Must be under the same owner as the source repo.                                          |
 | `target_branch`    | Yes      |                              | Branch name for the PR in target repo                                                                             |
@@ -186,7 +194,8 @@ jobs:
       - name: Sync OpenAPI
         uses: fingerprintjs/openapi-sync-action@v1
         with:
-          config_path: openapi-sync.config.yaml
+          source_path: source
+          config_path: source/openapi-sync.config.yaml
           target_repo: your-openapi-repo
           target_branch: ${{ inputs.target_branch || format('sync-{0}', github.event.pull_request.number) }}
           pr_title: ${{ inputs.pr_title || format('Sync OpenAPI Schema (#{0})', github.event.pull_request.number) }}
