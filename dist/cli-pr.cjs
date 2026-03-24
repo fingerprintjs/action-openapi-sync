@@ -8,21 +8,31 @@ var COMMENT_TAG_LINK = "<!-- openapi-sync-link -->";
 var COMMENT_TAG_STATUS = "<!-- openapi-sync-status -->";
 var WARNING_LABEL = "Not Completed";
 async function handlePrLifecycle(options) {
-  const { githubToken: githubToken2, sourceRepo, sourcePrNumber, sourcePrMerged, targetRepo, targetPrNumber } = options;
+  const {
+    sourceGithubToken: sourceGithubToken2,
+    targetGithubToken: targetGithubToken2,
+    sourceRepo,
+    sourcePrNumber,
+    sourcePrMerged,
+    targetRepo,
+    targetPrNumber
+  } = options;
   const targetPrUrl = `https://github.com/${targetRepo}/pull/${targetPrNumber}`;
-  const linkBody = `${COMMENT_TAG_LINK}
+  if (sourceGithubToken2) {
+    const linkBody = `${COMMENT_TAG_LINK}
 OpenAPI Sync PR: [${targetRepo}#${targetPrNumber}](${targetPrUrl})`;
-  await upsertComment(sourceRepo, sourcePrNumber, COMMENT_TAG_LINK, linkBody, githubToken2);
+    await upsertComment(sourceRepo, sourcePrNumber, COMMENT_TAG_LINK, linkBody, sourceGithubToken2);
+  }
   if (!sourcePrMerged) {
-    await addLabel(targetRepo, targetPrNumber, WARNING_LABEL, githubToken2);
+    await addLabel(targetRepo, targetPrNumber, WARNING_LABEL, targetGithubToken2);
     const statusBody = `${COMMENT_TAG_STATUS}
 \u26A0\uFE0FThe changes are not finalized yet. Do not merge this PR until the changes are ready.`;
-    await upsertComment(targetRepo, targetPrNumber, COMMENT_TAG_STATUS, statusBody, githubToken2);
+    await upsertComment(targetRepo, targetPrNumber, COMMENT_TAG_STATUS, statusBody, targetGithubToken2);
   } else {
-    await removeLabel(targetRepo, targetPrNumber, WARNING_LABEL, githubToken2);
+    await removeLabel(targetRepo, targetPrNumber, WARNING_LABEL, targetGithubToken2);
     const statusBody = `${COMMENT_TAG_STATUS}
 \u2705The changes have been finalized. This PR is ready for review.`;
-    await upsertComment(targetRepo, targetPrNumber, COMMENT_TAG_STATUS, statusBody, githubToken2);
+    await upsertComment(targetRepo, targetPrNumber, COMMENT_TAG_STATUS, statusBody, targetGithubToken2);
   }
 }
 async function upsertComment(repo, prNumber, tag, body, token) {
@@ -110,13 +120,17 @@ var { values: args } = (0, import_node_util.parseArgs)({
   },
   strict: true
 });
-var githubToken = process.env.GITHUB_TOKEN;
-if (!githubToken || !args["source-repo"] || !args["source-pr"] || !args["target-repo"] || !args["target-pr"]) {
-  console.error("Error: GITHUB_TOKEN env var, --source-repo, --source-pr, --target-repo, and --target-pr are required");
+var targetGithubToken = process.env.TARGET_REPO_GITHUB_TOKEN;
+var sourceGithubToken = process.env.SOURCE_REPO_GITHUB_TOKEN;
+if (!targetGithubToken || !args["source-repo"] || !args["source-pr"] || !args["target-repo"] || !args["target-pr"]) {
+  console.error(
+    "Error: TARGET_REPO_GITHUB_TOKEN env var, --source-repo, --source-pr, --target-repo, and --target-pr are required"
+  );
   process.exit(1);
 }
 handlePrLifecycle({
-  githubToken,
+  sourceGithubToken,
+  targetGithubToken,
   sourceRepo: args["source-repo"],
   sourcePrNumber: parseInt(args["source-pr"], 10),
   sourcePrMerged: args["source-pr-merged"] === "true",

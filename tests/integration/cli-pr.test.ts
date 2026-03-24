@@ -21,14 +21,14 @@ const allArgs = [
 ]
 
 describe('cli-pr', () => {
-  it('exits with code 1 when GITHUB_TOKEN is missing', async () => {
-    delete process.env.GITHUB_TOKEN
+  it('exits with code 1 when TARGET_REPO_GITHUB_TOKEN is missing', async () => {
+    delete process.env.TARGET_REPO_GITHUB_TOKEN
 
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const result = await run(allArgs, process.env as Record<string, string>)
 
     expect(result.exitCode).toBe(1)
-    expect(result.stderr).toContain('GITHUB_TOKEN')
+    expect(result.stderr).toContain('TARGET_REPO_GITHUB_TOKEN')
   })
 
   it.each(['--source-repo', '--source-pr', '--target-repo', '--target-pr'])(
@@ -36,7 +36,7 @@ describe('cli-pr', () => {
     async (missing) => {
       const argIndex = allArgs.indexOf(missing)
       const args = [...allArgs.slice(0, argIndex), ...allArgs.slice(argIndex + 2)]
-      const result = await run(args, { GITHUB_TOKEN: 'test-token' })
+      const result = await run(args, { TARGET_REPO_GITHUB_TOKEN: 'target-token' })
 
       expect(result.exitCode).toBe(1)
       expect(result.stderr).toContain(missing)
@@ -44,7 +44,7 @@ describe('cli-pr', () => {
   )
 
   it('completes successfully with all required args and token', async () => {
-    const result = await run(allArgs, { GITHUB_TOKEN: 'test-token' })
+    const result = await run(allArgs, { TARGET_REPO_GITHUB_TOKEN: 'target-token' })
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('PR lifecycle actions completed')
@@ -52,7 +52,7 @@ describe('cli-pr', () => {
 
   it('accepts --source-pr-merged false', async () => {
     const result = await run([...allArgs, '--source-pr-merged', 'false'], {
-      GITHUB_TOKEN: 'test-token',
+      TARGET_REPO_GITHUB_TOKEN: 'target-token',
     })
 
     expect(result.exitCode).toBe(0)

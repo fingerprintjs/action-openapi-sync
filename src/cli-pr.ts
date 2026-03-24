@@ -12,15 +12,19 @@ const { values: args } = parseArgs({
   strict: true,
 })
 
-const githubToken = process.env.GITHUB_TOKEN
+const targetGithubToken = process.env.TARGET_REPO_GITHUB_TOKEN
+const sourceGithubToken = process.env.SOURCE_REPO_GITHUB_TOKEN
 
-if (!githubToken || !args['source-repo'] || !args['source-pr'] || !args['target-repo'] || !args['target-pr']) {
-  console.error('Error: GITHUB_TOKEN env var, --source-repo, --source-pr, --target-repo, and --target-pr are required')
+if (!targetGithubToken || !args['source-repo'] || !args['source-pr'] || !args['target-repo'] || !args['target-pr']) {
+  console.error(
+    'Error: TARGET_REPO_GITHUB_TOKEN env var, --source-repo, --source-pr, --target-repo, and --target-pr are required'
+  )
   process.exit(1)
 }
 
 handlePrLifecycle({
-  githubToken,
+  sourceGithubToken,
+  targetGithubToken,
   sourceRepo: args['source-repo'],
   sourcePrNumber: parseInt(args['source-pr'], 10),
   sourcePrMerged: args['source-pr-merged'] === 'true',

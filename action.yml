@@ -17,9 +17,12 @@ inputs:
   target_branch:
     description: 'Branch name for the PR in target repo'
     required: true
-  github_token:
-    description: 'GitHub token for target repo access and PR operations'
+  target_repo_github_token:
+    description: 'GitHub token for target repo access (checkout, PR creation, labels, status comments)'
     required: true
+  source_repo_github_token:
+    description: 'GitHub token for source repo access (commenting on source PRs)'
+    required: false
   pr_title:
     description: 'Pull Request title'
     required: false
@@ -61,7 +64,7 @@ runs:
     - name: Checkout target repository
       uses: actions/checkout@v4
       with:
-        token: ${{ inputs.github_token }}
+        token: ${{ inputs.target_repo_github_token }}
         repository: ${{ github.repository_owner }}/${{ inputs.target_repo }}
         path: target
         persist-credentials: false
@@ -88,7 +91,7 @@ runs:
       uses: peter-evans/create-pull-request@v6
       with:
         path: target
-        token: ${{ inputs.github_token }}
+        token: ${{ inputs.target_repo_github_token }}
         commit-message: ${{ inputs.commit_message }}
         title: ${{ inputs.pr_title }}
         body: ${{ steps.sync.outputs.pr_body }}
@@ -100,7 +103,8 @@ runs:
       if: inputs.dry_run == 'false' && steps.sync.outputs.has_diff == 'true' && inputs.source_pr_number != ''
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
+        TARGET_REPO_GITHUB_TOKEN: ${{ inputs.target_repo_github_token }}
+        SOURCE_REPO_GITHUB_TOKEN: ${{ inputs.source_repo_github_token }}
       run: |
         node ${{ github.action_path }}/dist/cli-pr.cjs \
           --source-repo "${{ github.repository }}" \

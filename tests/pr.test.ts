@@ -49,7 +49,8 @@ function mockFetchFlow(
 
 function defaultOptions(overrides?: Partial<PrOptions>): PrOptions {
   return {
-    githubToken: 'test-token',
+    sourceGithubToken: 'source-token',
+    targetGithubToken: 'target-token',
     sourceRepo: 'owner/source',
     sourcePrNumber: 42,
     sourcePrMerged: true,
@@ -225,16 +226,16 @@ describe('handlePrLifecycle', () => {
     expect(fetchMock.mock.calls[4][1]?.method).toBe('POST')
   })
 
-  it('sends correct Authorization header', async () => {
+  it('sends correct Authorization header per repo', async () => {
     mockFetchFlow()
 
-    await handlePrLifecycle(defaultOptions({ githubToken: 'my-secret-token' }))
+    await handlePrLifecycle(defaultOptions({ sourceGithubToken: 'source-secret', targetGithubToken: 'target-secret' }))
 
-    const fetchMock = vi.mocked(fetch)
-    for (let i = 0; i < fetchMock.mock.calls.length; i++) {
-      const headers = getFetchCallHeaders(i)
-      expect(headers.Authorization).toBe('token my-secret-token')
-    }
+    expect(getFetchCallHeaders(0).Authorization).toBe('token source-secret')
+    expect(getFetchCallHeaders(1).Authorization).toBe('token source-secret')
+    expect(getFetchCallHeaders(2).Authorization).toBe('token target-secret')
+    expect(getFetchCallHeaders(3).Authorization).toBe('token target-secret')
+    expect(getFetchCallHeaders(4).Authorization).toBe('token target-secret')
   })
 
   it('finds comment on second page', async () => {
@@ -281,6 +282,16 @@ describe('handlePrLifecycle', () => {
     expect(fetchMock.mock.calls[4][0]).toBe(nextUrl)
     expect(fetchMock.mock.calls[5][0]).toContain('/issues/comments/2')
     expect(fetchMock.mock.calls[5][1]?.method).toBe('PATCH')
+  })
+
+  it('skips source PR comment when `sourceGithubToken` is not provided', async () => {
+    mockFetch([{ status: 200 }, { status: 200, body: [] }, { status: 201 }])
+
+    await handlePrLifecycle(defaultOptions({ sourceGithubToken: undefined }))
+
+    const fetchMock = vi.mocked(fetch)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock.mock.calls[0][0]).toContain('/repos/owner/target/')
   })
 
   it('stops pagination when no more page', async () => {

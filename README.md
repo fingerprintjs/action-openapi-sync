@@ -49,24 +49,26 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
     target_repo: your-openapi-repo
     target_branch: sync-openapi
     pr_title: 'Sync OpenAPI Schema'
-    github_token: ${{ secrets.SYNC_GITHUB_TOKEN }}
+    target_repo_github_token: ${{ secrets.TARGET_REPO_TOKEN }}
+    source_repo_github_token: ${{ secrets.SOURCE_REPO_TOKEN }}
 ```
 
 ## Inputs
 
-| Input              | Required | Default                      | Description                                                                  |
-|--------------------|----------|------------------------------|------------------------------------------------------------------------------|
-| `source_path`      | Yes      |                              | Source repository path                                                       |
-| `config_path`      | Yes      |                              | Path to the sync config file relative to source repo root                    |
-| `target_repo`      | Yes      |                              | Target repository name. Must be under the same owner as the source repo.     |
-| `target_branch`    | Yes      |                              | Branch name for the PR in target repo                                        |
-| `github_token`     | Yes      |                              | GitHub token for target repo access and PR operations.                       |
-| `pr_title`         | No       | `Sync OpenAPI Schema`        | Pull Request title                                                           |
-| `commit_message`   | No       | `chore: sync OpenAPI schema` | Commit message                                                               |
-| `labels`           | No       |                              | Comma-separated PR labels                                                    |
-| `dry_run`          | No       | `false`                      | Only report diff, do not create PR                                           |
-| `source_pr_number` | No       |                              | Source PR number (for commenting on source PR with target PR link)           |
-| `source_pr_merged` | No       | `true`                       | Whether the source PR is merged. If `false`, adds a warning to the target PR |
+| Input                      | Required | Default                      | Description                                                                          |
+|----------------------------|----------|------------------------------|--------------------------------------------------------------------------------------|
+| `source_path`              | Yes      |                              | Source repository path                                                               |
+| `config_path`              | Yes      |                              | Path to the sync config file relative to source repo root                            |
+| `target_repo`              | Yes      |                              | Target repository name. Must be under the same owner as the source repo.             |
+| `target_branch`            | Yes      |                              | Branch name for the PR in target repo                                                |
+| `target_repo_github_token` | Yes      |                              | GitHub token for target repo access (checkout, PR creation, labels, status comments) |
+| `source_repo_github_token` | No       |                              | GitHub token for source repo access (commenting on source PRs)                       |
+| `pr_title`                 | No       | `Sync OpenAPI Schema`        | Pull Request title                                                                   |
+| `commit_message`           | No       | `chore: sync OpenAPI schema` | Commit message                                                                       |
+| `labels`                   | No       |                              | Comma-separated PR labels                                                            |
+| `dry_run`                  | No       | `false`                      | Only report diff, do not create PR                                                   |
+| `source_pr_number`         | No       |                              | Source PR number (for commenting on source PR with target PR link)                   |
+| `source_pr_merged`         | No       | `true`                       | Whether the source PR is merged. If `false`, adds a warning to the target PR         |
 
 ## Outputs
 
@@ -196,7 +198,8 @@ jobs:
           target_repo: your-openapi-repo
           target_branch: ${{ inputs.target_branch || format('sync-{0}', github.event.pull_request.number) }}
           pr_title: ${{ inputs.pr_title || format('Sync OpenAPI Schema (#{0})', github.event.pull_request.number) }}
-          github_token: ${{ secrets.SYNC_GITHUB_TOKEN }}
+          target_repo_github_token: ${{ secrets.TARGET_REPO_TOKEN }}
+          source_repo_github_token: ${{ secrets.SOURCE_REPO_TOKEN }}
           source_pr_number: ${{ github.event.pull_request.number }}
           source_pr_merged: ${{ github.event.pull_request.merged || 'true' }}
           dry_run: ${{ inputs.dry_run || false }}

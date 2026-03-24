@@ -3,12 +3,13 @@ const COMMENT_TAG_STATUS = '<!-- openapi-sync-status -->'
 const WARNING_LABEL = 'Not Completed'
 
 export interface PrOptions {
-  githubToken: string
+  targetGithubToken: string
   sourceRepo: string
   sourcePrNumber: number
   sourcePrMerged: boolean
   targetRepo: string
   targetPrNumber: number
+  sourceGithubToken?: string
 }
 
 interface GitHubComment {
@@ -18,25 +19,35 @@ interface GitHubComment {
 
 /** Handle PR lifecycle actions. */
 export async function handlePrLifecycle(options: PrOptions): Promise<void> {
-  const { githubToken, sourceRepo, sourcePrNumber, sourcePrMerged, targetRepo, targetPrNumber } = options
+  const {
+    sourceGithubToken,
+    targetGithubToken,
+    sourceRepo,
+    sourcePrNumber,
+    sourcePrMerged,
+    targetRepo,
+    targetPrNumber,
+  } = options
 
   const targetPrUrl = `https://github.com/${targetRepo}/pull/${targetPrNumber}`
 
   // Comment on source PR with link to target PR
-  const linkBody = `${COMMENT_TAG_LINK}\nOpenAPI Sync PR: [${targetRepo}#${targetPrNumber}](${targetPrUrl})`
-  await upsertComment(sourceRepo, sourcePrNumber, COMMENT_TAG_LINK, linkBody, githubToken)
+  if (sourceGithubToken) {
+    const linkBody = `${COMMENT_TAG_LINK}\nOpenAPI Sync PR: [${targetRepo}#${targetPrNumber}](${targetPrUrl})`
+    await upsertComment(sourceRepo, sourcePrNumber, COMMENT_TAG_LINK, linkBody, sourceGithubToken)
+  }
 
   // Handle status on target PR
   if (!sourcePrMerged) {
-    await addLabel(targetRepo, targetPrNumber, WARNING_LABEL, githubToken)
+    await addLabel(targetRepo, targetPrNumber, WARNING_LABEL, targetGithubToken)
 
     const statusBody = `${COMMENT_TAG_STATUS}\n⚠️The changes are not finalized yet. Do not merge this PR until the changes are ready.`
-    await upsertComment(targetRepo, targetPrNumber, COMMENT_TAG_STATUS, statusBody, githubToken)
+    await upsertComment(targetRepo, targetPrNumber, COMMENT_TAG_STATUS, statusBody, targetGithubToken)
   } else {
-    await removeLabel(targetRepo, targetPrNumber, WARNING_LABEL, githubToken)
+    await removeLabel(targetRepo, targetPrNumber, WARNING_LABEL, targetGithubToken)
 
     const statusBody = `${COMMENT_TAG_STATUS}\n✅The changes have been finalized. This PR is ready for review.`
-    await upsertComment(targetRepo, targetPrNumber, COMMENT_TAG_STATUS, statusBody, githubToken)
+    await upsertComment(targetRepo, targetPrNumber, COMMENT_TAG_STATUS, statusBody, targetGithubToken)
   }
 }
 
