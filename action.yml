@@ -89,6 +89,22 @@ runs:
           --target-root "target" \
           ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
 
+    - name: Generate diff patch
+      if: steps.sync.outputs.has_diff == 'true'
+      shell: bash
+      run: |
+        cd target
+        git add -A
+        git diff --cached --no-color > "$RUNNER_TEMP/openapi-sync.patch"
+        git reset
+
+    - name: Upload diff artifact
+      if: steps.sync.outputs.has_diff == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: openapi-sync-diff
+        path: ${{ runner.temp }}/openapi-sync.patch
+
     - name: Create or Update Pull Request
       id: create_pr
       if: inputs.dry_run == 'false' && steps.sync.outputs.has_diff == 'true'
