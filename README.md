@@ -40,7 +40,7 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
     path: source
 
 - name: Sync OpenAPI Schema
-  uses: fingerprintjs/action-openapi-sync@main
+  uses: fingerprintjs/action-openapi-sync@v0.1.0
   with:
     source_path: source
     config_path: openapi-sync.config.yaml
@@ -50,7 +50,7 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
     target_branch: sync-openapi
     pr_title: 'Sync OpenAPI Schema'
     target_repo_github_token: ${{ secrets.TARGET_REPO_TOKEN }}
-    source_repo_github_token: ${{ secrets.SOURCE_REPO_TOKEN }}
+    source_repo_github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Inputs
@@ -191,7 +191,7 @@ jobs:
           path: source
 
       - name: Sync OpenAPI
-        uses: fingerprintjs/openapi-sync-action@v1
+        uses: fingerprintjs/openapi-sync-action@v0.1.0
         with:
           source_path: source
           config_path: source/openapi-sync.config.yaml
@@ -199,10 +199,28 @@ jobs:
           target_branch: ${{ inputs.target_branch || format('sync-{0}', github.event.pull_request.number) }}
           pr_title: ${{ inputs.pr_title || format('Sync OpenAPI Schema (#{0})', github.event.pull_request.number) }}
           target_repo_github_token: ${{ secrets.TARGET_REPO_TOKEN }}
-          source_repo_github_token: ${{ secrets.SOURCE_REPO_TOKEN }}
+          source_repo_github_token: ${{ secrets.GITHUB_TOKEN }}
           source_pr_number: ${{ github.event.pull_request.number }}
           source_pr_merged: ${{ github.event.pull_request.merged || 'true' }}
           dry_run: ${{ inputs.dry_run || false }}
+```
+
+You can also use the `actions/create-github-app-token` action to generate a GitHub token for the target (and source) repository:
+
+```yaml
+- name: Get GitHub App token
+  uses: actions/create-github-app-token@f2acddfb5195534d487896a656232b016a682f3c
+  id: app-token
+  with:
+    app-id: ${{ vars.RUNNER_APP_ID }}
+    private-key: ${{ secrets.RUNNER_APP_PRIVATE_KEY }}
+    repositories: your-openapi-repo
+
+- name: Run OpenAPI Sync
+  uses: fingerprintjs/openapi-sync-action@v0.1.0
+  with:
+    # ...
+    target_repo_github_token: ${{ steps.app-token.outputs.token }}
 ```
 
 ## Development
