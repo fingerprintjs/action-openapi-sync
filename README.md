@@ -40,7 +40,7 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
     path: source
 
 - name: Sync OpenAPI Schema
-  uses: fingerprintjs/action-openapi-sync@main
+  uses: fingerprintjs/action-openapi-sync@v0.1.0
   with:
     source_path: source
     config_path: openapi-sync.config.yaml
@@ -49,24 +49,26 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
     target_repo: your-openapi-repo
     target_branch: sync-openapi
     pr_title: 'Sync OpenAPI Schema'
-    github_token: ${{ secrets.SYNC_GITHUB_TOKEN }}
+    target_repo_github_token: ${{ secrets.TARGET_REPO_TOKEN }}
+    source_repo_github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Inputs
 
-| Input              | Required | Default                      | Description                                                                  |
-|--------------------|----------|------------------------------|------------------------------------------------------------------------------|
-| `source_path`      | Yes      |                              | Source repository path                                                       |
-| `config_path`      | Yes      |                              | Path to the sync config file relative to source repo root                    |
-| `target_repo`      | Yes      |                              | Target repository name. Must be under the same owner as the source repo.     |
-| `target_branch`    | Yes      |                              | Branch name for the PR in target repo                                        |
-| `github_token`     | Yes      |                              | GitHub token for target repo access and PR operations.                       |
-| `pr_title`         | No       | `Sync OpenAPI Schema`        | Pull Request title                                                           |
-| `commit_message`   | No       | `chore: sync OpenAPI schema` | Commit message                                                               |
-| `labels`           | No       |                              | Comma-separated PR labels                                                    |
-| `dry_run`          | No       | `false`                      | Only report diff, do not create PR                                           |
-| `source_pr_number` | No       |                              | Source PR number (for commenting on source PR with target PR link)           |
-| `source_pr_merged` | No       | `true`                       | Whether the source PR is merged. If `false`, adds a warning to the target PR |
+| Input                      | Required | Default                      | Description                                                                          |
+|----------------------------|----------|------------------------------|--------------------------------------------------------------------------------------|
+| `source_path`              | Yes      |                              | Source repository path                                                               |
+| `config_path`              | Yes      |                              | Path to the sync config file relative to source repo root                            |
+| `target_repo`              | Yes      |                              | Target repository name. Must be under the same owner as the source repo.             |
+| `target_branch`            | Yes      |                              | Branch name for the PR in target repo                                                |
+| `target_repo_github_token` | Yes      |                              | GitHub token for target repo access (checkout, PR creation, labels, status comments) |
+| `source_repo_github_token` | No       |                              | GitHub token for source repo access (commenting on source PRs)                       |
+| `pr_title`                 | No       | `Sync OpenAPI Schema`        | Pull Request title                                                                   |
+| `commit_message`           | No       | `chore: sync OpenAPI schema` | Commit message                                                                       |
+| `labels`                   | No       |                              | Comma-separated PR labels                                                            |
+| `dry_run`                  | No       | `false`                      | Only report diff, do not create PR                                                   |
+| `source_pr_number`         | No       |                              | Source PR number (for commenting on source PR with target PR link)                   |
+| `source_pr_merged`         | No       | `true`                       | Whether the source PR is merged. If `false`, adds a warning to the target PR         |
 
 ## Outputs
 
@@ -176,6 +178,10 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -189,17 +195,36 @@ jobs:
           path: source
 
       - name: Sync OpenAPI
-        uses: fingerprintjs/openapi-sync-action@v1
+        uses: fingerprintjs/openapi-sync-action@v0.1.0
         with:
           source_path: source
           config_path: source/openapi-sync.config.yaml
           target_repo: your-openapi-repo
           target_branch: ${{ inputs.target_branch || format('sync-{0}', github.event.pull_request.number) }}
           pr_title: ${{ inputs.pr_title || format('Sync OpenAPI Schema (#{0})', github.event.pull_request.number) }}
-          github_token: ${{ secrets.SYNC_GITHUB_TOKEN }}
+          target_repo_github_token: ${{ secrets.TARGET_REPO_TOKEN }}
+          source_repo_github_token: ${{ secrets.GITHUB_TOKEN }}
           source_pr_number: ${{ github.event.pull_request.number }}
           source_pr_merged: ${{ github.event.pull_request.merged || 'true' }}
           dry_run: ${{ inputs.dry_run || false }}
+```
+
+You can also use the `actions/create-github-app-token` action to generate a GitHub token for the target (and source) repository:
+
+```yaml
+- name: Get GitHub App token
+  uses: actions/create-github-app-token@f2acddfb5195534d487896a656232b016a682f3c
+  id: app-token
+  with:
+    app-id: ${{ vars.RUNNER_APP_ID }}
+    private-key: ${{ secrets.RUNNER_APP_PRIVATE_KEY }}
+    repositories: your-openapi-repo
+
+- name: Run OpenAPI Sync
+  uses: fingerprintjs/openapi-sync-action@v0.1.0
+  with:
+    # ...
+    target_repo_github_token: ${{ steps.app-token.outputs.token }}
 ```
 
 ## Development
