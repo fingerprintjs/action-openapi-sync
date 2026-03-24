@@ -18,14 +18,8 @@ inputs:
     description: 'Branch name for the PR in target repo'
     required: true
   github_token:
-    description: 'GitHub token for target repo access and PR operations. Not needed if app_id and app_private_key are provided.'
-    required: false
-  app_id:
-    description: 'GitHub App ID for generating a token'
-    required: false
-  app_private_key:
-    description: 'GitHub App private key for generating a token'
-    required: false
+    description: 'GitHub token for target repo access and PR operations'
+    required: true
   pr_title:
     description: 'Pull Request title'
     required: false
@@ -64,19 +58,10 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Generate token from GitHub App
-      id: app-token
-      if: inputs.app_id != '' && inputs.app_private_key != ''
-      uses: actions/create-github-app-token@v1
-      with:
-        app-id: ${{ inputs.app_id }}
-        private-key: ${{ inputs.app_private_key }}
-        repositories: ${{ github.event.repository.name }},${{ inputs.target_repo }}
-
     - name: Checkout target repository
       uses: actions/checkout@v4
       with:
-        token: ${{ steps.app-token.outputs.token || inputs.github_token }}
+        token: ${{ inputs.github_token }}
         repository: ${{ github.repository_owner }}/${{ inputs.target_repo }}
         path: target
         persist-credentials: false
@@ -103,7 +88,7 @@ runs:
       uses: peter-evans/create-pull-request@v6
       with:
         path: target
-        token: ${{ steps.app-token.outputs.token || inputs.github_token }}
+        token: ${{ inputs.github_token }}
         commit-message: ${{ inputs.commit_message }}
         title: ${{ inputs.pr_title }}
         body: ${{ steps.sync.outputs.pr_body }}
@@ -115,7 +100,7 @@ runs:
       if: inputs.dry_run == 'false' && steps.sync.outputs.has_diff == 'true' && inputs.source_pr_number != ''
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ steps.app-token.outputs.token || inputs.github_token }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
       run: |
         node ${{ github.action_path }}/dist/cli-pr.cjs \
           --source-repo "${{ github.repository }}" \
