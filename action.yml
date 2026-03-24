@@ -5,8 +5,11 @@ branding:
   color: orange
 
 inputs:
+  source_path:
+    description: 'Source repository path'
+    required: true
   config_path:
-    description: 'Path to the sync config file relative to source repo root'
+    description: 'Path to the sync config file'
     required: true
   target_repo:
     description: 'Target repository name. Must be under the same owner as the source repo.'
@@ -89,8 +92,8 @@ runs:
       shell: bash
       run: |
         node ${{ github.action_path }}/dist/cli-sync.cjs \
-          --config "source/${{ inputs.config_path }}" \
-          --source-root "source" \
+          --config "${{ inputs.config_path }}" \
+          --source-root "${{ inputs.source_path }}" \
           --target-root "target" \
           ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
 
