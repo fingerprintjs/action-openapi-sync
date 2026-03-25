@@ -1,5 +1,11 @@
 # action-openapi-sync
 
+## 0.2.1
+
+### Patch Changes
+
+- Move dry_run handling from sync CLI to action workflow level. ([885beb2](https://github.com/fingerprintjs/action-openapi-sync/commit/885beb23ecdcf2f23bd7f0f64f32e3dad1817f3d))
+
 ## 0.2.0
 
 ### Minor Changes
