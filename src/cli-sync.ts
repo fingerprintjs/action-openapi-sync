@@ -10,7 +10,6 @@ const { values: args } = parseArgs({
     config: { type: 'string', short: 'c' },
     'source-root': { type: 'string', default: '.' },
     'target-root': { type: 'string', default: 'target' },
-    'dry-run': { type: 'boolean', default: false },
   },
   strict: true,
 })
@@ -25,7 +24,6 @@ async function runSync(): Promise<void> {
   const configPath = args.config!
   const sourceRoot = args['source-root']!
   const targetRoot = args['target-root']!
-  const dryRun = args['dry-run']!
 
   console.log(`Loading config from ${configPath}`)
   const config = loadConfig(configPath)
@@ -48,20 +46,6 @@ async function runSync(): Promise<void> {
   }
 
   console.log(`Changes: ${diff.summary}`)
-
-  if (dryRun) {
-    console.log('Dry run — skipping file writes.')
-    if (diff.added.length > 0) {
-      console.log('Added:', diff.added.join(', '))
-    }
-    if (diff.modified.length > 0) {
-      console.log('Modified:', diff.modified.join(', '))
-    }
-    if (diff.deleted.length > 0) {
-      console.log('Deleted:', diff.deleted.join(', '))
-    }
-    return
-  }
 
   writeFiles(targetFiles, targetRoot)
   deleteFiles(diff.deleted, targetRoot)

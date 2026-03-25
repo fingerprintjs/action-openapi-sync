@@ -46,25 +46,6 @@ describe('cli-sync', () => {
     expect(fs.existsSync(path.join(targetRoot, 'schemas/components/schemas/InternalDiagnostics.yml'))).toBe(false)
   })
 
-  it('does not write files in dry-run mode', async () => {
-    const result = await run([
-      '--config',
-      configPath,
-      '--source-root',
-      sourceRoot,
-      '--target-root',
-      targetRoot,
-      '--dry-run',
-    ])
-
-    expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('Dry run')
-
-    // Target should remain empty
-    const files = fs.readdirSync(targetRoot)
-    expect(files).toEqual([])
-  })
-
   it('writes GITHUB_OUTPUT variables', async () => {
     const outputFile = path.join(targetRoot, 'github-output.txt')
     fs.writeFileSync(outputFile, '')
