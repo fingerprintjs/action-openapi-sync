@@ -86,8 +86,7 @@ runs:
         node ${{ github.action_path }}/dist/cli-sync.cjs \
           --config "${{ inputs.config_path }}" \
           --source-root "${{ inputs.source_path }}" \
-          --target-root "target" \
-          ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
+          --target-root "target"
 
     - name: Generate diff patch
       if: steps.sync.outputs.has_diff == 'true'
