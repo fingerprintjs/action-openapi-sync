@@ -1,5 +1,11 @@
 # action-openapi-sync
 
+## 0.2.2
+
+### Patch Changes
+
+- Fix pruning of intentionally empty arrays. ([36c496a](https://github.com/fingerprintjs/action-openapi-sync/commit/36c496ae9302d136eae9afe90cc56725bf572d25))
+
 ## 0.2.1
 
 ### Patch Changes
