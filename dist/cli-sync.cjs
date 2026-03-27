@@ -4979,6 +4979,9 @@ function stripFields(node, fields) {
 }
 function pruneEmpty(node) {
   if (Array.isArray(node)) {
+    if (node.length === 0) {
+      return node;
+    }
     const pruned = node.map((item) => pruneEmpty(item)).filter((item) => item !== void 0);
     if (pruned.length === 0) {
       return void 0;
@@ -5001,6 +5004,9 @@ function pruneEmpty(node) {
 }
 function cleanDanglingRefs(node, excludedFiles, currentDir) {
   if (Array.isArray(node)) {
+    if (node.length === 0) {
+      return { node, changed: false };
+    }
     let changed2 = false;
     const result2 = [];
     for (const item of node) {
@@ -5149,8 +5155,7 @@ var { values: args } = (0, import_node_util.parseArgs)({
   options: {
     config: { type: "string", short: "c" },
     "source-root": { type: "string", default: "." },
-    "target-root": { type: "string", default: "target" },
-    "dry-run": { type: "boolean", default: false }
+    "target-root": { type: "string", default: "target" }
   },
   strict: true
 });
@@ -5162,7 +5167,6 @@ async function runSync() {
   const configPath = args.config;
   const sourceRoot = args["source-root"];
   const targetRoot = args["target-root"];
-  const dryRun = args["dry-run"];
   console.log(`Loading config from ${configPath}`);
   const config = loadConfig(configPath);
   console.log(`Mode: ${config.mode}, Entrypoint: ${config.entrypoint}`);
@@ -5178,19 +5182,6 @@ async function runSync() {
     return;
   }
   console.log(`Changes: ${diff.summary}`);
-  if (dryRun) {
-    console.log("Dry run \u2014 skipping file writes.");
-    if (diff.added.length > 0) {
-      console.log("Added:", diff.added.join(", "));
-    }
-    if (diff.modified.length > 0) {
-      console.log("Modified:", diff.modified.join(", "));
-    }
-    if (diff.deleted.length > 0) {
-      console.log("Deleted:", diff.deleted.join(", "));
-    }
-    return;
-  }
   writeFiles(targetFiles, targetRoot);
   deleteFiles(diff.deleted, targetRoot);
   console.log("Files written successfully.");

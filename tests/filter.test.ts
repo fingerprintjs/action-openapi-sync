@@ -623,6 +623,52 @@ describe('filterFiles', () => {
     expect(result.excludedFiles.has('main.yml')).toBe(true)
   })
 
+  it('preserves security key with empty scope list', () => {
+    const content = yaml.dump({
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0' },
+      security: [{ bearerAuth: [] }],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+          },
+        },
+      },
+    })
+
+    const result = filterFile(content, defaultConfig)
+    const doc = parseOutput(result)
+
+    expect(doc).toEqual({
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0' },
+      security: [{ bearerAuth: [] }],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+          },
+        },
+      },
+    })
+  })
+
+  it('preserves empty arrays but prunes arrays that become empty later', () => {
+    const content = yaml.dump({
+      type: 'object',
+      tags: [],
+      someList: [{ properties: { a: { 'x-internal': true, type: 'string' } } }],
+    })
+
+    const result = filterFile(content, defaultConfig)
+    const doc = parseOutput(result)
+
+    expect(doc).toEqual({ type: 'object', tags: [] })
+  })
+
   it('handles non-record path values', () => {
     const content = yaml.dump({
       paths: {
@@ -674,6 +720,50 @@ describe('filterFiles', () => {
           properties: {
             b: { type: 'number' },
           },
+        },
+      },
+    })
+  })
+
+  it('preserves intentionally empty array after dangling ref cleanup', () => {
+    const files = new Map([
+      [
+        'entry.yml',
+        yaml.dump({
+          openapi: '3.1.0',
+          info: { title: 'API', version: '1.0' },
+          security: [{ bearerAuth: [] }],
+          paths: {
+            '/public': { $ref: './public.yml' },
+            '/internal': { $ref: './excluded.yml' },
+          },
+          components: {
+            securitySchemes: {
+              bearerAuth: { type: 'http', scheme: 'bearer' },
+            },
+          },
+        }),
+      ],
+      ['public.yml', yaml.dump({ get: { summary: 'Public endpoint' } })],
+      ['excluded.yml', internalObjectContent],
+    ])
+    const reachable = new Set(['entry.yml', 'public.yml', 'excluded.yml'])
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const result = filterFiles(files, reachable, defaultConfig)
+    warnSpy.mockRestore()
+
+    const entryDoc = parseOutput(result.filtered.get('entry.yml') ?? '')
+    expect(entryDoc).toEqual({
+      openapi: '3.1.0',
+      info: { title: 'API', version: '1.0' },
+      security: [{ bearerAuth: [] }],
+      paths: {
+        '/public': { $ref: './public.yml' },
+      },
+      components: {
+        securitySchemes: {
+          bearerAuth: { type: 'http', scheme: 'bearer' },
         },
       },
     })

@@ -315,6 +315,11 @@ function stripFields(node: unknown, fields: string[]): unknown {
 /** Recursively remove empty objects and arrays. */
 function pruneEmpty(node: unknown): unknown {
   if (Array.isArray(node)) {
+    // Do not remove intentionally empty arrays
+    if (node.length === 0) {
+      return node
+    }
+
     const pruned = node.map((item) => pruneEmpty(item)).filter((item) => item !== undefined)
     if (pruned.length === 0) {
       return undefined
@@ -343,6 +348,11 @@ function pruneEmpty(node: unknown): unknown {
 /** Recursively remove $ref nodes that point to excluded files. */
 function cleanDanglingRefs(node: unknown, excludedFiles: Set<string>, currentDir: string): DanglingRefResult {
   if (Array.isArray(node)) {
+    // Do not remove intentionally empty arrays
+    if (node.length === 0) {
+      return { node, changed: false }
+    }
+
     let changed = false
     const result = []
 

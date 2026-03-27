@@ -15,10 +15,11 @@ async function handlePrLifecycle(options) {
     sourcePrNumber,
     sourcePrMerged,
     targetRepo,
-    targetPrNumber
+    targetPrNumber,
+    commentOnSourcePr = true
   } = options;
   const targetPrUrl = `https://github.com/${targetRepo}/pull/${targetPrNumber}`;
-  if (sourceGithubToken2) {
+  if (sourceGithubToken2 && commentOnSourcePr) {
     const linkBody = `${COMMENT_TAG_LINK}
 OpenAPI Sync PR: [${targetRepo}#${targetPrNumber}](${targetPrUrl})`;
     await upsertComment(sourceRepo, sourcePrNumber, COMMENT_TAG_LINK, linkBody, sourceGithubToken2);
@@ -116,7 +117,8 @@ var { values: args } = (0, import_node_util.parseArgs)({
     "source-pr": { type: "string" },
     "source-pr-merged": { type: "string", default: "true" },
     "target-repo": { type: "string" },
-    "target-pr": { type: "string" }
+    "target-pr": { type: "string" },
+    "comment-on-source-pr": { type: "string", default: "true" }
   },
   strict: true
 });
@@ -135,7 +137,8 @@ handlePrLifecycle({
   sourcePrNumber: parseInt(args["source-pr"], 10),
   sourcePrMerged: args["source-pr-merged"] === "true",
   targetRepo: args["target-repo"],
-  targetPrNumber: parseInt(args["target-pr"], 10)
+  targetPrNumber: parseInt(args["target-pr"], 10),
+  commentOnSourcePr: args["comment-on-source-pr"] === "true"
 }).then(() => {
   console.log("PR lifecycle actions completed.");
 }).catch((error) => {
