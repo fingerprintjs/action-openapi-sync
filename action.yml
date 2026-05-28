@@ -65,7 +65,7 @@ outputs:
     value: ${{ steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff }}
   diff_summary:
     description: 'Summary of changes'
-    value: ${{ steps.sync.outputs.diff_summary }}
+    value: ${{ steps.recheck_diff.outputs.diff_summary || steps.sync.outputs.diff_summary }}
   target_pr_number:
     description: 'PR number created/updated in target repo'
     value: ${{ steps.create_pr.outputs.pull-request-number }}
@@ -126,6 +126,23 @@ runs:
           echo "has_diff=false" >> "$GITHUB_OUTPUT"
         else
           echo "has_diff=true" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.sync.outputs.has_diff }}" != "true" ]; then
+            CHANGED=$(git diff --cached --name-only | wc -l | tr -d ' ')
+            echo "diff_summary=${CHANGED} file(s) changed by hooks" >> "$GITHUB_OUTPUT"
+            {
+              echo 'pr_body<<HOOK_PR_BODY_EOF'
+              echo "## Changes from sync hooks"
+              echo ""
+              echo "${CHANGED} file(s) changed by sync hooks."
+              echo ""
+              echo "<details><summary>Changed files</summary>"
+              echo ""
+              git diff --cached --name-only
+              echo ""
+              echo "</details>"
+              echo 'HOOK_PR_BODY_EOF'
+            } >> "$GITHUB_OUTPUT"
+          fi
         fi
         git reset
 
@@ -154,7 +171,7 @@ runs:
         token: ${{ inputs.target_repo_github_token }}
         commit-message: ${{ inputs.commit_message }}
         title: ${{ inputs.pr_title }}
-        body: ${{ steps.sync.outputs.pr_body }}
+        body: ${{ steps.recheck_diff.outputs.pr_body || steps.sync.outputs.pr_body }}
         branch: ${{ inputs.target_branch }}
         delete-branch: true
         labels: ${{ inputs.labels }}
