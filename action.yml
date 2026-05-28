@@ -117,7 +117,7 @@ runs:
 
     - name: Re-check for changes after hooks
       id: recheck_diff
-      if: inputs.post_sync_script != ''
+      if: inputs.pre_sync_script != '' || inputs.post_sync_script != ''
       shell: bash
       run: |
         cd target
