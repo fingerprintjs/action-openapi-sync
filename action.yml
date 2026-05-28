@@ -62,7 +62,7 @@ inputs:
 outputs:
   has_diff:
     description: 'Whether meaningful changes were detected'
-    value: ${{ steps.sync.outputs.has_diff }}
+    value: ${{ steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff }}
   diff_summary:
     description: 'Summary of changes'
     value: ${{ steps.sync.outputs.diff_summary }}
