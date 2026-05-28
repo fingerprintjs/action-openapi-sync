@@ -50,6 +50,14 @@ inputs:
     description: 'Whether to post a link comment on the source PR (true/false).'
     required: false
     default: 'true'
+  pre_sync_script:
+    description: 'Shell script to run before the sync. Has access to SOURCE_PATH, TARGET_PATH, and CONFIG_PATH env vars.'
+    required: false
+    default: ''
+  post_sync_script:
+    description: 'Shell script to run after the sync writes files. Has access to SOURCE_PATH, TARGET_PATH, CONFIG_PATH, and SYNC_HAS_DIFF env vars. Any files written to TARGET_PATH will be included in the PR.'
+    required: false
+    default: ''
 
 outputs:
   has_diff:
@@ -79,6 +87,15 @@ runs:
       with:
         node-version: 24
 
+    - name: Run pre-sync hook
+      if: inputs.pre_sync_script != ''
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+        TARGET_PATH: target
+        CONFIG_PATH: ${{ inputs.config_path }}
+      run: ${{ inputs.pre_sync_script }}
+
     - name: Run OpenAPI Sync
       id: sync
       shell: bash
@@ -88,8 +105,32 @@ runs:
           --source-root "${{ inputs.source_path }}" \
           --target-root "target"
 
+    - name: Run post-sync hook
+      if: inputs.post_sync_script != ''
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+        TARGET_PATH: target
+        CONFIG_PATH: ${{ inputs.config_path }}
+        SYNC_HAS_DIFF: ${{ steps.sync.outputs.has_diff }}
+      run: ${{ inputs.post_sync_script }}
+
+    - name: Re-check for changes after hooks
+      id: recheck_diff
+      if: inputs.post_sync_script != ''
+      shell: bash
+      run: |
+        cd target
+        git add -A
+        if git diff --cached --quiet; then
+          echo "has_diff=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "has_diff=true" >> "$GITHUB_OUTPUT"
+        fi
+        git reset
+
     - name: Generate diff patch
-      if: steps.sync.outputs.has_diff == 'true'
+      if: steps.sync.outputs.has_diff == 'true' || steps.recheck_diff.outputs.has_diff == 'true'
       shell: bash
       run: |
         cd target
@@ -98,7 +139,7 @@ runs:
         git reset
 
     - name: Upload diff artifact
-      if: steps.sync.outputs.has_diff == 'true'
+      if: steps.sync.outputs.has_diff == 'true' || steps.recheck_diff.outputs.has_diff == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: openapi-sync-diff
@@ -106,7 +147,7 @@ runs:
 
     - name: Create or Update Pull Request
       id: create_pr
-      if: inputs.dry_run == 'false' && steps.sync.outputs.has_diff == 'true'
+      if: inputs.dry_run == 'false' && (steps.sync.outputs.has_diff == 'true' || steps.recheck_diff.outputs.has_diff == 'true')
       uses: peter-evans/create-pull-request@v6
       with:
         path: target
@@ -119,7 +160,7 @@ runs:
         labels: ${{ inputs.labels }}
 
     - name: PR lifecycle actions
-      if: inputs.dry_run == 'false' && steps.sync.outputs.has_diff == 'true' && inputs.source_pr_number != ''
+      if: inputs.dry_run == 'false' && (steps.sync.outputs.has_diff == 'true' || steps.recheck_diff.outputs.has_diff == 'true') && inputs.source_pr_number != ''
       shell: bash
       env:
         TARGET_REPO_GITHUB_TOKEN: ${{ inputs.target_repo_github_token }}

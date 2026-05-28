@@ -70,6 +70,8 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
 | `source_pr_number`         | No       |                              | Source PR number (for commenting on source PR with target PR link)                   |
 | `source_pr_merged`         | No       | `true`                       | Whether the source PR is merged. If `false`, adds a warning to the target PR         |
 | `comment_on_source_pr`     | No       | `true`                       | Whether to post a link comment on the source PR                                      |
+| `pre_sync_script`          | No       |                              | Shell script to run before the sync.                                                 |
+| `post_sync_script`         | No       |                              | Shell script to run after the sync.                                                  |
 
 ## Outputs
 
@@ -152,6 +154,37 @@ The action filters internal content at multiple levels:
 **Field stripping** - All keys listed in `strip_fields` are removed from the output.
 
 **`externalValue` support** - Files referenced via OpenAPI `externalValue` are included in ref resolution.
+
+## Hooks
+
+The action supports `pre_sync_script` and `post_sync_script` hooks to run custom shell commands before and after the sync process. This is useful for generating additional files (e.g., examples with `jq`) that aren't reachable from the OpenAPI schema but should be included in the target repository PR.
+
+Both hooks receive environment variables for the source, target, and config paths. The post-sync hook also receives `SYNC_HAS_DIFF` indicating whether the sync itself detected changes.
+
+```yaml
+- name: Sync OpenAPI
+  uses: fingerprintjs/action-openapi-sync@v0.2
+  with:
+    source_path: source
+    config_path: source/openapi-sync.config.yaml
+    target_repo: your-openapi-repo
+    target_branch: sync-openapi
+    target_repo_github_token: ${{ secrets.TARGET_REPO_TOKEN }}
+    pre_sync_script: |
+      echo "Preparing source files..."
+      # Modify source files before the sync processes them
+    post_sync_script: |
+      # Generate an example file and copy it to the target repo
+      mkdir -p "$TARGET_PATH/examples"
+      jq '.paths["/example"].get.responses["200"].content["application/json"].example' \
+        "$SOURCE_PATH/api/examples.json" > "$TARGET_PATH/examples/get-example.json"
+```
+
+You can also point hooks at shared script files in your source repo:
+
+```yaml
+    post_sync_script: bash "$SOURCE_PATH/scripts/post-sync.sh"
+```
 
 ## Full Workflow Example
 
