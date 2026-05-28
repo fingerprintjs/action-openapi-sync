@@ -130,7 +130,7 @@ runs:
         git reset
 
     - name: Generate diff patch
-      if: steps.sync.outputs.has_diff == 'true' || steps.recheck_diff.outputs.has_diff == 'true'
+      if: (steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true'
       shell: bash
       run: |
         cd target
@@ -139,7 +139,7 @@ runs:
         git reset
 
     - name: Upload diff artifact
-      if: steps.sync.outputs.has_diff == 'true' || steps.recheck_diff.outputs.has_diff == 'true'
+      if: (steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: openapi-sync-diff
@@ -147,7 +147,7 @@ runs:
 
     - name: Create or Update Pull Request
       id: create_pr
-      if: inputs.dry_run == 'false' && (steps.sync.outputs.has_diff == 'true' || steps.recheck_diff.outputs.has_diff == 'true')
+      if: inputs.dry_run == 'false' && ((steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true')
       uses: peter-evans/create-pull-request@v6
       with:
         path: target
@@ -160,7 +160,7 @@ runs:
         labels: ${{ inputs.labels }}
 
     - name: PR lifecycle actions
-      if: inputs.dry_run == 'false' && (steps.sync.outputs.has_diff == 'true' || steps.recheck_diff.outputs.has_diff == 'true') && inputs.source_pr_number != ''
+      if: inputs.dry_run == 'false' && ((steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true') && inputs.source_pr_number != ''
       shell: bash
       env:
         TARGET_REPO_GITHUB_TOKEN: ${{ inputs.target_repo_github_token }}
