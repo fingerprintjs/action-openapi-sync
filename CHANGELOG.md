@@ -1,5 +1,11 @@
 # action-openapi-sync
 
+## 0.3.0
+
+### Minor Changes
+
+- Add `pre_sync_script` and `post_sync_script` hooks for running custom shell commands before and after the sync process ([a191d71](https://github.com/fingerprintjs/action-openapi-sync/commit/a191d71eb68d75b5e2036648d74be0decca131f9))
+
 ## 0.2.2
 
 ### Patch Changes
