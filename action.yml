@@ -50,14 +50,22 @@ inputs:
     description: 'Whether to post a link comment on the source PR (true/false).'
     required: false
     default: 'true'
+  pre_sync_script:
+    description: 'Shell script to run before the sync. Has access to SOURCE_PATH, TARGET_PATH, and CONFIG_PATH env vars.'
+    required: false
+    default: ''
+  post_sync_script:
+    description: 'Shell script to run after the sync writes files. Has access to SOURCE_PATH, TARGET_PATH, CONFIG_PATH, and SYNC_HAS_DIFF env vars. Any files written to TARGET_PATH will be included in the PR.'
+    required: false
+    default: ''
 
 outputs:
   has_diff:
     description: 'Whether meaningful changes were detected'
-    value: ${{ steps.sync.outputs.has_diff }}
+    value: ${{ steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff }}
   diff_summary:
     description: 'Summary of changes'
-    value: ${{ steps.sync.outputs.diff_summary }}
+    value: ${{ steps.recheck_diff.outputs.diff_summary || steps.sync.outputs.diff_summary }}
   target_pr_number:
     description: 'PR number created/updated in target repo'
     value: ${{ steps.create_pr.outputs.pull-request-number }}
@@ -79,6 +87,15 @@ runs:
       with:
         node-version: 24
 
+    - name: Run pre-sync hook
+      if: inputs.pre_sync_script != ''
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+        TARGET_PATH: target
+        CONFIG_PATH: ${{ inputs.config_path }}
+      run: ${{ inputs.pre_sync_script }}
+
     - name: Run OpenAPI Sync
       id: sync
       shell: bash
@@ -88,8 +105,49 @@ runs:
           --source-root "${{ inputs.source_path }}" \
           --target-root "target"
 
+    - name: Run post-sync hook
+      if: inputs.post_sync_script != ''
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+        TARGET_PATH: target
+        CONFIG_PATH: ${{ inputs.config_path }}
+        SYNC_HAS_DIFF: ${{ steps.sync.outputs.has_diff }}
+      run: ${{ inputs.post_sync_script }}
+
+    - name: Re-check for changes after hooks
+      id: recheck_diff
+      if: inputs.pre_sync_script != '' || inputs.post_sync_script != ''
+      shell: bash
+      run: |
+        cd target
+        git add -A
+        if git diff --cached --quiet; then
+          echo "has_diff=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "has_diff=true" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.sync.outputs.has_diff }}" != "true" ]; then
+            CHANGED=$(git diff --cached --name-only | wc -l | tr -d ' ')
+            echo "diff_summary=${CHANGED} file(s) changed by hooks" >> "$GITHUB_OUTPUT"
+            {
+              echo 'pr_body<<HOOK_PR_BODY_EOF'
+              echo "## Changes from sync hooks"
+              echo ""
+              echo "${CHANGED} file(s) changed by sync hooks."
+              echo ""
+              echo "<details><summary>Changed files</summary>"
+              echo ""
+              git diff --cached --name-only
+              echo ""
+              echo "</details>"
+              echo 'HOOK_PR_BODY_EOF'
+            } >> "$GITHUB_OUTPUT"
+          fi
+        fi
+        git reset
+
     - name: Generate diff patch
-      if: steps.sync.outputs.has_diff == 'true'
+      if: (steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true'
       shell: bash
       run: |
         cd target
@@ -98,7 +156,7 @@ runs:
         git reset
 
     - name: Upload diff artifact
-      if: steps.sync.outputs.has_diff == 'true'
+      if: (steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: openapi-sync-diff
@@ -106,20 +164,20 @@ runs:
 
     - name: Create or Update Pull Request
       id: create_pr
-      if: inputs.dry_run == 'false' && steps.sync.outputs.has_diff == 'true'
+      if: inputs.dry_run == 'false' && ((steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true')
       uses: peter-evans/create-pull-request@v6
       with:
         path: target
         token: ${{ inputs.target_repo_github_token }}
         commit-message: ${{ inputs.commit_message }}
         title: ${{ inputs.pr_title }}
-        body: ${{ steps.sync.outputs.pr_body }}
+        body: ${{ steps.recheck_diff.outputs.pr_body || steps.sync.outputs.pr_body }}
         branch: ${{ inputs.target_branch }}
         delete-branch: true
         labels: ${{ inputs.labels }}
 
     - name: PR lifecycle actions
-      if: inputs.dry_run == 'false' && steps.sync.outputs.has_diff == 'true' && inputs.source_pr_number != ''
+      if: inputs.dry_run == 'false' && ((steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true') && inputs.source_pr_number != ''
       shell: bash
       env:
         TARGET_REPO_GITHUB_TOKEN: ${{ inputs.target_repo_github_token }}
