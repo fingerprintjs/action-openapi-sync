@@ -1,6 +1,6 @@
 {
   "name": "action-openapi-sync",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "GitHub Action that synchronizes OpenAPI schema files between repositories",
   "author": "FingerprintJS, Inc (https://fingerprint.com)",
   "license": "MIT",
