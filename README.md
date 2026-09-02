@@ -55,23 +55,23 @@ A GitHub Action that synchronizes OpenAPI schema files between repositories.
 
 ## Inputs
 
-| Input                      | Required | Default                      | Description                                                                          |
-|----------------------------|----------|------------------------------|--------------------------------------------------------------------------------------|
-| `source_path`              | Yes      |                              | Source repository path                                                               |
-| `config_path`              | Yes      |                              | Path to the sync config file relative to source repo root                            |
-| `target_repo`              | Yes      |                              | Target repository name. Must be under the same owner as the source repo.             |
-| `target_branch`            | Yes      |                              | Branch name for the PR in target repo                                                |
-| `target_repo_github_token` | Yes      |                              | GitHub token for target repo access (checkout, PR creation, labels, status comments) |
-| `source_repo_github_token` | No       |                              | GitHub token for source repo access (commenting on source PRs)                       |
-| `pr_title`                 | No       | `Sync OpenAPI Schema`        | Pull Request title                                                                   |
-| `commit_message`           | No       | `chore: sync OpenAPI schema` | Commit message                                                                       |
-| `labels`                   | No       |                              | Comma-separated PR labels                                                            |
-| `dry_run`                  | No       | `false`                      | Only report diff, do not create PR                                                   |
-| `source_pr_number`         | No       |                              | Source PR number (for commenting on source PR with target PR link)                   |
-| `source_pr_merged`         | No       | `true`                       | Whether the source PR is merged. If `false`, adds a warning to the target PR         |
-| `comment_on_source_pr`     | No       | `true`                       | Whether to post a link comment on the source PR                                      |
-| `pre_sync_script`          | No       |                              | Shell script to run before the sync.                                                 |
-| `post_sync_script`         | No       |                              | Shell script to run after the sync.                                                  |
+| Input                      | Required | Default                      | Description                                                                                                                                                        |
+|----------------------------|----------|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `source_path`              | Yes      |                              | Source repository path                                                                                                                                             |
+| `config_path`              | Yes      |                              | Path to the sync config file relative to source repo root                                                                                                          |
+| `target_repo`              | Yes      |                              | Target repository name. Must be under the same owner as the source repo.                                                                                           |
+| `target_branch`            | Yes      |                              | Branch name for the PR in target repo                                                                                                                              |
+| `target_repo_github_token` | Yes      |                              | GitHub token for target repo access (checkout, PR creation, labels, status comments). If the target repo requires signed commits, this must be a GitHub App token. |
+| `source_repo_github_token` | No       |                              | GitHub token for source repo access (commenting on source PRs)                                                                                                     |
+| `pr_title`                 | No       | `Sync OpenAPI Schema`        | Pull Request title                                                                                                                                                 |
+| `commit_message`           | No       | `chore: sync OpenAPI schema` | Commit message                                                                                                                                                     |
+| `labels`                   | No       |                              | Comma-separated PR labels                                                                                                                                          |
+| `dry_run`                  | No       | `false`                      | Only report diff, do not create PR                                                                                                                                 |
+| `source_pr_number`         | No       |                              | Source PR number (for commenting on source PR with target PR link)                                                                                                 |
+| `source_pr_merged`         | No       | `true`                       | Whether the source PR is merged. If `false`, adds a warning to the target PR                                                                                       |
+| `comment_on_source_pr`     | No       | `true`                       | Whether to post a link comment on the source PR                                                                                                                    |
+| `pre_sync_script`          | No       |                              | Shell script to run before the sync.                                                                                                                               |
+| `post_sync_script`         | No       |                              | Shell script to run after the sync.                                                                                                                                |
 
 ## Outputs
 
