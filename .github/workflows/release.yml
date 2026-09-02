@@ -10,8 +10,8 @@ jobs:
     name: 'Release project'
     uses: fingerprintjs/dx-team-toolkit/.github/workflows/release-sdk-changesets.yml@v1
     with:
-      appId: ${{ vars.APP_ID }}
-      runnerAppId: ${{ vars.RUNNER_APP_ID }}
+      client-id: ${{ vars.APP_ID }}
+      runner-client-id: ${{ vars.RUNNER_APP_ID }}
       version-command: pnpm exec changeset version
       publish-command: pnpm exec changeset publish
       language: node
