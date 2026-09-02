@@ -1,5 +1,11 @@
 # action-openapi-sync
 
+## 0.4.0
+
+### Minor Changes
+
+- Sign commits in the PR created in the target repo ([800a9f5](https://github.com/fingerprintjs/action-openapi-sync/commit/800a9f5b4481071fd1940c826b41bb9d4c3c8979))
+
 ## 0.3.0
 
 ### Minor Changes
