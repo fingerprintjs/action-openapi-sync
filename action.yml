@@ -165,7 +165,7 @@ runs:
     - name: Create or Update Pull Request
       id: create_pr
       if: inputs.dry_run == 'false' && ((steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true')
-      uses: peter-evans/create-pull-request@v6
+      uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
       with:
         path: target
         token: ${{ inputs.target_repo_github_token }}
@@ -175,6 +175,7 @@ runs:
         branch: ${{ inputs.target_branch }}
         delete-branch: true
         labels: ${{ inputs.labels }}
+        sign-commits: true
 
     - name: PR lifecycle actions
       if: inputs.dry_run == 'false' && ((steps.recheck_diff.outputs.has_diff || steps.sync.outputs.has_diff) == 'true') && inputs.source_pr_number != ''
